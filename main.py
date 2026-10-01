@@ -16,7 +16,7 @@ def main():
     # 2. Solve
     solver = NearestNeighborSolver(instance)
     initial_solution = solver.solve()
-    solution = Simulated_Annealing(initial_solution).Start_Optimize()
+    solution = Simulated_Annealing(initial_solution).optimize()
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
 

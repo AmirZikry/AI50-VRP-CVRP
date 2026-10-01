@@ -38,7 +38,7 @@ class Simulated_Annealing(BaseOptimizer):
         neighborCost=delta+cost
         return delta,neighborCost,neighborRoutes
 
-    def Start_Optimize(self) -> Solution:
+    def optimize(self) -> Solution:
 
         temp=self.initTemp
 
