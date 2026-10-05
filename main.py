@@ -1,4 +1,5 @@
 import vrplib
+import time
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
@@ -12,14 +13,17 @@ def main():
     print(f"Loaded: {instance.name} (Customers: {instance.dimension - 1}, Capacity: {instance.capacity})")
 
     # 2. Solve
+    start = time.perf_counter()
     solver = NearestNeighborSolver(instance)
     solution = solver.solve()
+    runtime = time.perf_counter() - start
 
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
 
     # 4. Validate with the universal evaluator
     result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
+    result.runtime_seconds = runtime
 
     # 5. Print report
     for idx, route in enumerate(solution.routes, 1):
