@@ -2,7 +2,9 @@ import vrplib
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
+from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
+
 
 def main():
     instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
@@ -14,8 +16,8 @@ def main():
 
     # 2. Solve
     solver = NearestNeighborSolver(instance)
-    solution = solver.solve()
-
+    initial_solution = solver.solve()
+    solution = Simulated_Annealing(initial_solution).optimize()
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
 
