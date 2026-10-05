@@ -2,6 +2,7 @@ import vrplib
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
+from Solvers.CheapestInsertion import CheapestInsertionSolver
 
 def main():
     instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
