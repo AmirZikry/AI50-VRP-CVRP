@@ -3,6 +3,7 @@ import time
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
+from Solvers.GeneticAlgo import GeneticAlgorithmSolver
 
 def main():
     instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
@@ -14,7 +15,8 @@ def main():
 
     # 2. Solve
     start = time.perf_counter()
-    solver = NearestNeighborSolver(instance)
+    # solver = NearestNeighborSolver(instance)
+    solver = GeneticAlgorithmSolver(instance , pop_size=200 , generations=400, seed=42)
     solution = solver.solve()
     runtime = time.perf_counter() - start
 
