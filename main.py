@@ -4,6 +4,9 @@ from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
 from Solvers.GeneticAlgo import GeneticAlgorithmSolver
+from Optimizer.SimAnneal import Simulated_Annealing
+from Solvers.CheapestInsertion import CheapestInsertionSolver
+
 
 def main():
     instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
@@ -14,11 +17,16 @@ def main():
     print(f"Loaded: {instance.name} (Customers: {instance.dimension - 1}, Capacity: {instance.capacity})")
 
     # 2. Solve
+
     start = time.perf_counter()
     # solver = NearestNeighborSolver(instance)
     solver = GeneticAlgorithmSolver(instance , pop_size=200 , generations=400, seed=42)
-    solution = solver.solve()
+    initial_solution = solver.solve()
     runtime = time.perf_counter() - start
+
+#     solver = NearestNeighborSolver(instance)
+#     initial_solution = solver.solve()
+    solution = Simulated_Annealing(initial_solution).optimize()
 
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
