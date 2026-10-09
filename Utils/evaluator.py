@@ -9,6 +9,7 @@ class EvaluationResult:
     num_vehicles: int
     violations: list[str] = field(default_factory=list)
     gap_to_best_known: float | None = None  
+    runtime_seconds: float | None = None
 
     def report(self) -> str:
         lines = [
@@ -18,6 +19,8 @@ class EvaluationResult:
         ]
         if self.gap_to_best_known is not None:
             lines.append(f"Gap to BKS: {self.gap_to_best_known:.2f}%")
+        if self.runtime_seconds is not None:           
+            lines.append(f"Runtime: {self.runtime_seconds:.2f} s")
         if self.violations:
             lines.append("Violations:")
             lines.extend(f"  - {v}" for v in self.violations)
