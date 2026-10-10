@@ -7,13 +7,16 @@ from Solvers.GeneticAlgo import GeneticAlgorithmSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
 
+from Solvers.ClarkeWright import ClarkeWrightSolver
+from Solvers.NearestNeighbor import NearestNeighborSolver
 
 def main():
-    instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
+    instance_path = "./DataCVRP/instances/XML100_1111_01.vrp"
     solution_path = "./DataCVRP/solutions/XML100_1111_01.sol"
-    
-    # 1. Load instance into domain model
+
+    # 1. Load benchmark instance
     instance = load_instance(instance_path, is_local=True)
+
     print(f"Loaded: {instance.name} (Customers: {instance.dimension - 1}, Capacity: {instance.capacity})")
 
     # 2. Solve
@@ -35,13 +38,24 @@ def main():
     result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
     result.runtime_seconds = runtime
 
-    # 5. Print report
-    for idx, route in enumerate(solution.routes, 1):
-        print(f"Route #{idx} (Load: {route.load}/{route.capacity}): {route.stops}")
+        # 3. Load best-known solution cost
+        best_known = vrplib.read_solution(solution_path)
+        
+        # 4. Validate with the universal evaluator
+        result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
 
-    print("\nBest Known Solution Cost = ", best_known["cost"])
-    print(f"\n{result.report()}")
+        # 5. Print report
+        for idx, route in enumerate(solution.routes, 1):
+            print(f"Route #{idx} (Load: {route.load}/{route.capacity}):{route.stops}")
+
+        
+        print("\nBest Known Solution Cost =", best_known["cost"])
+        print(f"\n{result.report()}")
+
+    # Verify validity
     if not result.is_valid:
-        raise ValueError("Solver produced an invalid solution")
+        raise ValueError(f"{name} produced an invalid solution")
+
+
 if __name__ == "__main__":
     main()
