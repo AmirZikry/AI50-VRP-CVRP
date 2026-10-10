@@ -38,23 +38,23 @@ def main():
     result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
     result.runtime_seconds = runtime
 
-        # 3. Load best-known solution cost
-        best_known = vrplib.read_solution(solution_path)
+    # 3. Load best-known solution cost
+    best_known = vrplib.read_solution(solution_path)
         
         # 4. Validate with the universal evaluator
-        result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
+    result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
 
-        # 5. Print report
-        for idx, route in enumerate(solution.routes, 1):
-            print(f"Route #{idx} (Load: {route.load}/{route.capacity}):{route.stops}")
+    # 5. Print report
+    for idx, route in enumerate(solution.routes, 1):
+        print(f"Route #{idx} (Load: {route.load}/{route.capacity}):{route.stops}")
 
-        
-        print("\nBest Known Solution Cost =", best_known["cost"])
-        print(f"\n{result.report()}")
+    
+    print("\nBest Known Solution Cost =", best_known["cost"])
+    print(f"\n{result.report()}")
 
     # Verify validity
     if not result.is_valid:
-        raise ValueError(f"{name} produced an invalid solution")
+        raise ValueError(f"Solver produced an invalid solution")
 
 
 if __name__ == "__main__":
