@@ -8,7 +8,7 @@ from Models.Routes import Route
 
 class AntColonySolver(BaseVRPSolver):
     
-    def __init__(self, instance:VrpInstance, num_ants:int, num_iterations:int, alpha:float, beta:float, rho:float, Q:float):
+    def __init__(self, instance:VrpInstance, num_ants:int = 50, num_iterations:int = 100, alpha:float = 0.9, beta:float = 0.7, rho:float = 0.45, Q:float = 1.0):
         
         super().__init__(instance)
         self.num_ants = num_ants
@@ -21,7 +21,8 @@ class AntColonySolver(BaseVRPSolver):
         # initialize pheromone matrix
         self.tau = np.ones((self.instance.dimension, self.instance.dimension))
 
-        self.eta = np.where(self.instance.edge_weights > 0, 1 / self.instance.edge_weights, 0)
+        self.eta = np.divide(1.0, self.instance.edge_weights, out=np.zeros_like(self.instance.edge_weights, dtype=float), where=self.instance.edge_weights > 0)
+
 
     def construct_solution(self) -> Solution:
 
@@ -74,9 +75,9 @@ class AntColonySolver(BaseVRPSolver):
 
         best_solution = None
 
-        for _ in self.num_iterations:
+        for _ in range(self.num_iterations):
 
-            solutions = [self.construct_solution() for _ in range(num_ants)]
+            solutions = [self.construct_solution() for _ in range(self.num_ants)]
             self.update_pheromone(solutions)
 
             best_iteration = min(solutions, key=lambda s: s.total_cost)
@@ -85,7 +86,7 @@ class AntColonySolver(BaseVRPSolver):
 
                 best_solution = best_iteration
             
-            return best_solution
+        return best_solution
 
                 
             
