@@ -6,6 +6,7 @@ from Solvers.NearestNeighbor import NearestNeighborSolver
 from Solvers.GeneticAlgo import GeneticAlgorithmSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
+from Solvers.AntColony import AntColonySolver
 
 from Solvers.ClarkeWright import ClarkeWrightSolver
 from Solvers.NearestNeighbor import NearestNeighborSolver
@@ -20,6 +21,10 @@ def main():
     print(f"Loaded: {instance.name} (Customers: {instance.dimension - 1}, Capacity: {instance.capacity})")
 
     # 2. Solve
+    solver = NearestNeighborSolver(instance)
+    # solver = AntColonySolver(instance, num_ants = 100, num_iterations = 200 ,alpha = 0.95,beta = 0.45, rho = 0.3, Q = 0.5)
+
+    initial_solution = solver.solve()
 
     start = time.perf_counter()
     # solver = NearestNeighborSolver(instance)
@@ -29,6 +34,7 @@ def main():
 
 #     solver = NearestNeighborSolver(instance)
 #     initial_solution = solver.solve()
+
     solution = Simulated_Annealing(initial_solution).optimize()
 
     # 3. Load best-known solution cost 
