@@ -1,18 +1,23 @@
 import vrplib
+import time
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
+from Solvers.GeneticAlgo import GeneticAlgorithmSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
 from Solvers.AntColony import AntColonySolver
 
+from Solvers.ClarkeWright import ClarkeWrightSolver
+from Solvers.NearestNeighbor import NearestNeighborSolver
 
 def main():
-    instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
+    instance_path = "./DataCVRP/instances/XML100_1111_01.vrp"
     solution_path = "./DataCVRP/solutions/XML100_1111_01.sol"
-    
-    # 1. Load instance into domain model
+
+    # 1. Load benchmark instance
     instance = load_instance(instance_path, is_local=True)
+
     print(f"Loaded: {instance.name} (Customers: {instance.dimension - 1}, Capacity: {instance.capacity})")
 
     # 2. Solve
@@ -20,8 +25,16 @@ def main():
     # solver = AntColonySolver(instance, num_ants = 100, num_iterations = 200 ,alpha = 0.95,beta = 0.45, rho = 0.3, Q = 0.5)
 
     initial_solution = solver.solve()
-    
-    # optimise initial solution
+
+    start = time.perf_counter()
+    # solver = NearestNeighborSolver(instance)
+    solver = GeneticAlgorithmSolver(instance , pop_size=200 , generations=400, seed=42)
+    initial_solution = solver.solve()
+    runtime = time.perf_counter() - start
+
+#     solver = NearestNeighborSolver(instance)
+#     initial_solution = solver.solve()
+
     solution = Simulated_Annealing(initial_solution).optimize()
 
     # 3. Load best-known solution cost 
@@ -29,14 +42,26 @@ def main():
 
     # 4. Validate with the universal evaluator
     result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
+    result.runtime_seconds = runtime
+
+    # 3. Load best-known solution cost
+    best_known = vrplib.read_solution(solution_path)
+        
+        # 4. Validate with the universal evaluator
+    result = evaluate_solution(instance, solution, best_known_cost=best_known["cost"])
 
     # 5. Print report
     for idx, route in enumerate(solution.routes, 1):
-        print(f"Route #{idx} (Load: {route.load}/{route.capacity}): {route.stops}")
+        print(f"Route #{idx} (Load: {route.load}/{route.capacity}):{route.stops}")
 
-    print("\nBest Known Solution Cost = ", best_known["cost"])
+    
+    print("\nBest Known Solution Cost =", best_known["cost"])
     print(f"\n{result.report()}")
+
+    # Verify validity
     if not result.is_valid:
-        raise ValueError("Solver produced an invalid solution")
+        raise ValueError(f"Solver produced an invalid solution")
+
+
 if __name__ == "__main__":
     main()
