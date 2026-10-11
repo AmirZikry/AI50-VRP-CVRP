@@ -8,7 +8,7 @@ from Models.Routes import Route
 
 class AntColonySolver(BaseVRPSolver):
     
-    def __init__(self, instance:VrpInstance, num_ants:int = 50, num_iterations:int = 100, alpha:float = 0.9, beta:float = 0.7, rho:float = 0.45, Q:float = 1.0):
+    def __init__(self, instance:VrpInstance, num_ants:int = 20, num_iterations:int = 100, alpha:float = 1.0, beta:float = 2.5, rho:float = 0.2, Q:float = 1.0):
         
         super().__init__(instance)
         self.num_ants = num_ants
