@@ -1,6 +1,6 @@
 from Models.Routes import Route
 from Models.Solution import Solution
-from Solvers.base import BaseVRPSolver
+from Solvers.BaseSolver import BaseVRPSolver
 
 
 class CheapestInsertionSolver(BaseVRPSolver):
