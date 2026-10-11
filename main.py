@@ -4,6 +4,7 @@ from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
+from Solvers.AntColony import AntColonySolver
 
 
 def main():
@@ -16,8 +17,13 @@ def main():
 
     # 2. Solve
     solver = NearestNeighborSolver(instance)
+    # solver = AntColonySolver(instance, num_ants = 100, num_iterations = 200 ,alpha = 0.95,beta = 0.45, rho = 0.3, Q = 0.5)
+
     initial_solution = solver.solve()
+    
+    # optimise initial solution
     solution = Simulated_Annealing(initial_solution).optimize()
+
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
 
