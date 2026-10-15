@@ -4,7 +4,7 @@ from Utils.evaluator import evaluate_solution
 from Solvers.NearestNeighbor import NearestNeighborSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
-
+from Optimizer.TabuSearch import Tabu_Search
 
 def main():
     instance_path  = "./DataCVRP/instances/XML100_1111_01.vrp"
@@ -17,7 +17,9 @@ def main():
     # 2. Solve
     solver = NearestNeighborSolver(instance)
     initial_solution = solver.solve()
-    solution = Simulated_Annealing(initial_solution).optimize()
+    # solution = Simulated_Annealing(initial_solution).optimize()
+    solution = Tabu_Search(initial_solution, tabu_tenure=10, max_iterations=1000).optimize()
+    
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
 
