@@ -4,6 +4,7 @@ from Solvers.BaseSolver import BaseVRPSolver
 from Models.Instance import VrpInstance
 from Models.Solution import Solution
 from Models.Routes import Route
+from typing import List
 
 
 class AntColonySolver(BaseVRPSolver):

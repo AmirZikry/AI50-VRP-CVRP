@@ -1,0 +1,6 @@
+tabulate
+numpy
+vrplib
+typing
+openpyxl
+pandas
