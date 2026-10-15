@@ -6,8 +6,8 @@ from Solvers.NearestNeighbor import NearestNeighborSolver
 from Solvers.GeneticAlgo import GeneticAlgorithmSolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Solvers.CheapestInsertion import CheapestInsertionSolver
+from Optimizer.TabuSearch import Tabu_Search
 from Solvers.AntColony import AntColonySolver
-
 from Solvers.ClarkeWright import ClarkeWrightSolver
 from Solvers.NearestNeighbor import NearestNeighborSolver
 
@@ -25,7 +25,6 @@ def main():
     # solver = AntColonySolver(instance, num_ants = 100, num_iterations = 200 ,alpha = 0.95,beta = 0.45, rho = 0.3, Q = 0.5)
 
     initial_solution = solver.solve()
-
     start = time.perf_counter()
     # solver = NearestNeighborSolver(instance)
     solver = GeneticAlgorithmSolver(instance , pop_size=200 , generations=400, seed=42)
@@ -36,6 +35,7 @@ def main():
 #     initial_solution = solver.solve()
 
     solution = Simulated_Annealing(initial_solution).optimize()
+  # solution = Tabu_Search(initial_solution, tabu_tenure=10, max_iterations=1000).optimize()
 
     # 3. Load best-known solution cost 
     best_known = vrplib.read_solution(solution_path)
