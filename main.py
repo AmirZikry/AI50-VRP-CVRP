@@ -27,7 +27,7 @@ def get_solvers(instance):
         "Cheapest Insertion": lambda: CheapestInsertionSolver(instance),
         "Clarke-Wright": lambda: ClarkeWrightSolver(instance),
         "Genetic Algorithm": lambda: GeneticAlgorithmSolver(instance, pop_size=100, generations=200, seed=42),
-        "Ant Colony": lambda: AntColonySolver(instance, num_ants=100, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
+        "Ant Colony": lambda: AntColonySolver(instance, num_ants=50, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
     }
 
 
