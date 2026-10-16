@@ -21,18 +21,18 @@ from Optimizer.TabuSearch import Tabu_Search
 
 
 def get_solvers(instance):
-    """Factory defining all baseline solvers."""
+    """defining all solvers."""
     return {
         "Nearest Neighbor": lambda: NearestNeighborSolver(instance),
         "Cheapest Insertion": lambda: CheapestInsertionSolver(instance),
         "Clarke-Wright": lambda: ClarkeWrightSolver(instance),
         "Genetic Algorithm": lambda: GeneticAlgorithmSolver(instance, pop_size=100, generations=200, seed=42),
-        "Ant Colony": lambda: AntColonySolver(instance, num_ants=50, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
+        "Ant Colony": lambda: AntColonySolver(instance, num_ants=100, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
     }
 
 
 def get_optimizers():
-    """Factory defining all post-optimizers."""
+    """defining all post-optimizers."""
     return {
         "Simulated Annealing": lambda sol: Simulated_Annealing(sol),
         "Tabu Search": lambda sol: Tabu_Search(sol, tabu_tenure=10, max_iterations=500),
@@ -40,7 +40,7 @@ def get_optimizers():
 
 
 def export_to_excel(results, instance, best_cost, output_file="benchmark_results.xlsx"):
-    """Creates a clean, professionally formatted Excel workbook."""
+    """Creates a formatted Excel workbook."""
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Benchmark Results"
@@ -76,7 +76,7 @@ def export_to_excel(results, instance, best_cost, output_file="benchmark_results
         "Total Cost",
         "Optimality Gap",
         "Runtime (s)",
-        "Feasible / Valid"
+        "Valid"
     ]
 
     # Write headers
@@ -157,7 +157,7 @@ def main():
     # --- Phase 1: Standalone Solvers ---
     print("Running Standalone Solvers")
     for solver_name, solver_builder in solver_factories.items():
-        print(f" Testing {solver_name}...")
+        print(f" Testing {solver_name}")
         start = time.perf_counter()
         try:
             solver = solver_builder()
