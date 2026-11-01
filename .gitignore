@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+#web
+**/*.json
+**/vite.config.ts
+**/package-lock.json
+
 # Distribution / packaging
 .Python
 build/
