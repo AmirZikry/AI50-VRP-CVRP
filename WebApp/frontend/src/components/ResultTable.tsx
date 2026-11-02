@@ -28,7 +28,7 @@ export default function ResultsTable() {
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} aria-label="simple table">
         <TableHead>
-          <TableRow>
+          <TableRow >
             <TableCell>Method</TableCell>
             <TableCell align="center">Type</TableCell>
             <TableCell align="center">Mean Gap</TableCell>
