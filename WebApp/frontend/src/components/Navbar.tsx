@@ -1,52 +1,49 @@
-import { NavLink } from "react-router-dom";
-import { Route } from "lucide-react"; 
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChartBarIcon, HouseIcon, Route as RouteIcon, ChartPie } from "lucide-react";
+import {
+  MenuDock, MenuDockIcon, MenuDockItem, MenuDockLabel,
+} from "@/components/ui/menu-dock";
 
-const links = [
-  { to: "/", label: "Home" },
-  { to: "/benchmark", label: "Benchmark" },
-  { to: "/compare", label: "Visualization" },
+const items = [
+  { to: "/", label: "Solve", Icon: HouseIcon },
+  { to: "/benchmark", label: "Benchmark", Icon: ChartBarIcon },
+  { to: "", label:"Visualization", Icon: ChartPie}
 ];
 
 export function Navbar() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
   return (
-    <header className=" bg-foreground sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-md px-6 py-3">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-card/90 backdrop-blur-md px-6 py-3">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between">
-        
         {/* logo */}
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
-            <Route className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+            <RouteIcon className="h-5 w-5" />
           </div>
-
           <div>
-            <h1 className="text-sm font-semibold tracking-tight leading-none text-primary-foreground">
+            <h1 className="text-sm font-semibold leading-none tracking-tight text-foreground">
               CVRP Benchmark
             </h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Team 4 · Optimization Lab
-            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Team 4 · Optimization Lab</p>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="flex items-center bg-muted/60 p-1 rounded-lg border border-border/50">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === "/"}
-              className={({ isActive }) =>
-                `px-3.5 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  isActive
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
-                }`
-              }
+        {/* navigation tab*/}
+        <MenuDock
+            aria-label="Main"
+            value={pathname}
+            onValueChange={(v) => navigate(v)}
+            className="p-1 shadow-none"
             >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
+            {items.map(({ to, label, Icon }) => (
+                <MenuDockItem key={to} value={to} className="min-w-0 flex-row gap-2 px-3 py-1">
+                <MenuDockIcon><Icon className="size-4" /></MenuDockIcon>
+                <MenuDockLabel>{label}</MenuDockLabel>
+                </MenuDockItem>
+            ))}
+        </MenuDock>
       </div>
     </header>
   );
