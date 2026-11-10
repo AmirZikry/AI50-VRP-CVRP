@@ -1,21 +1,16 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import { Navbar } from './components/navbar'
-import './App.css'
+import { Routes, Route } from "react-router-dom";
+import { Navbar } from "@/components/Navbar"
+import Solve from "@/pages/Solve";
+import Benchmark from "@/pages/Benchmark";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-    <Navbar>
-      
-    </Navbar>
-      
-    </>
-  )
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Solve />} />
+        <Route path="/benchmark" element={<Benchmark />} />
+      </Routes>
+    </div>
+  );
 }
-
-export default App
