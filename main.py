@@ -5,6 +5,8 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
+from pathlib import Path
+
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
 
@@ -19,6 +21,9 @@ from Solvers.AntColony import AntColonySolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Optimizer.TabuSearch import Tabu_Search
 
+# BASE_DIR points to the root 'Vrp' folder where DataCVRP resides
+BASE_DIR = Path(__file__).resolve().parent
+
 DEFAULT_INSTANCE = "XML100_1111_01"
 EXCEL_NAME= "cvrp_benchmark_results.xlsx"
 
@@ -32,24 +37,12 @@ def get_solvers(instance):
         "Ant Colony": lambda: AntColonySolver(instance, num_ants=50, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
     }
 
-def get_solver(instance,name):
-    factories=get_solvers(instance)
-    if name not in factories:
-        raise ValueError(f"Unknown solver name '{name}': Available: {list(factories)}" )
-    return factories[name]
-
 def get_optimizers():
     """defining all post-optimizers."""
     return {
         "Simulated Annealing": lambda sol: Simulated_Annealing(sol),
         "Tabu Search": lambda sol: Tabu_Search(sol, tabu_tenure=10, max_iterations=500),
     }
-
-def get_optimizer(solution,name):
-    factories=get_solvers(solution)
-    if name not in factories:
-        raise ValueError(f"Unknown optimizer name '{name}': Available: {list(factories)}" )
-    return factories[name]
 
 def export_to_excel(results, instance, best_cost, output_file="benchmark_results.xlsx"):
     """Creates a formatted Excel workbook."""
@@ -216,8 +209,8 @@ def run_benchmark(
     optimizers=None,      # None = no optimizer, one name, a list, or "all"
     export_excel=False,    # True / False
     ):
-    instance_path = f"./DataCVRP/instances/{instanceName}.vrp"
-    solution_path = f"./DataCVRP/solutions/{instanceName}.sol"
+    instance_path = BASE_DIR / "DataCVRP" / "instances" / f"{instanceName}.vrp"
+    solution_path = BASE_DIR / "DataCVRP" / "solutions" / f"{instanceName}.sol"
 
     # 1. Load instance and benchmark reference
     instance = load_instance(instance_path, is_local=True)
