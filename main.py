@@ -6,6 +6,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 from pathlib import Path
+import os
 
 from Utils.dataLoader import load_instance
 from Utils.evaluator import evaluate_solution
@@ -27,6 +28,14 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_INSTANCE = "XML100_1111_01"
 EXCEL_NAME= "cvrp_benchmark_results.xlsx"
 
+def get_instances():
+    data_Path=f"{BASE_DIR}/DataCVRP/instances"
+    contents = os.listdir(data_Path)
+    files=[]
+    for file in contents:
+        files.append(Path(file).stem)
+    return files
+
 def get_solvers(instance):
     """defining all solvers."""
     return {
@@ -42,6 +51,14 @@ def get_optimizers():
     return {
         "Simulated Annealing": lambda sol: Simulated_Annealing(sol),
         "Tabu Search": lambda sol: Tabu_Search(sol, tabu_tenure=10, max_iterations=500),
+    }
+
+def list_options():
+    """Names the frontend can show in its dropdowns."""
+    return {
+        "instances" : get_instances(),
+        "solvers": list(get_solvers(None).keys()),      
+        "optimizers": list(get_optimizers().keys()),
     }
 
 def export_to_excel(results, instance, best_cost, output_file="benchmark_results.xlsx"):

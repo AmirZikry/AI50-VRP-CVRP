@@ -11,7 +11,7 @@ from ..schemas.solutionSchema import SolutionResponse
 from ..schemas.benchmarkSchema import BenchmarkRequest
 from main import run_benchmark
 
-router=APIRouter(prefix="/solutions", tags=["items"])
+router=APIRouter(prefix="/solutions", tags=["Solution"])
 
 testsolution= [{
     "id":1,
@@ -27,6 +27,14 @@ testsolution= [{
     "total_cost":80
 }
 ]
+
+"""
+{
+  "instanceName": "XML100_1111_01",
+  "solvers": ["Clarke-Wright"],
+  "optimizer": "Simulated Annealing"
+}
+"""
 
 #@router.get("/",response_model=list[SolutionResponse])
 @router.post("/")

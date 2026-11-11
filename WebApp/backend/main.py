@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers.solution import router as solutionRouter
+from .routers.option import router as optionRouter
 
 app = FastAPI(
 title="CVRP API",
@@ -18,6 +19,8 @@ app.add_middleware(
 )
 
 app.include_router(solutionRouter)
+app.include_router(optionRouter)
+
 
 @app.get("/")
 def read_root():
