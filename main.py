@@ -19,6 +19,8 @@ from Solvers.AntColony import AntColonySolver
 from Optimizer.SimAnneal import Simulated_Annealing
 from Optimizer.TabuSearch import Tabu_Search
 
+DEFAULT_INSTANCE = "XML100_1111_01"
+EXCEL_NAME= "cvrp_benchmark_results.xlsx"
 
 def get_solvers(instance):
     """defining all solvers."""
@@ -30,6 +32,11 @@ def get_solvers(instance):
         "Ant Colony": lambda: AntColonySolver(instance, num_ants=50, num_iterations=100, alpha=0.95, beta=0.45, rho=0.3, Q=0.5),
     }
 
+def get_solver(instance,name):
+    factories=get_solvers(instance)
+    if name not in factories:
+        raise ValueError(f"Unknown solver name '{name}': Available: {list(factories)}" )
+    return factories[name]
 
 def get_optimizers():
     """defining all post-optimizers."""
@@ -38,6 +45,11 @@ def get_optimizers():
         "Tabu Search": lambda sol: Tabu_Search(sol, tabu_tenure=10, max_iterations=500),
     }
 
+def get_optimizer(solution,name):
+    factories=get_solvers(solution)
+    if name not in factories:
+        raise ValueError(f"Unknown optimizer name '{name}': Available: {list(factories)}" )
+    return factories[name]
 
 def export_to_excel(results, instance, best_cost, output_file="benchmark_results.xlsx"):
     """Creates a formatted Excel workbook."""
@@ -136,9 +148,76 @@ def export_to_excel(results, instance, best_cost, output_file="benchmark_results
     wb.save(output_file)
     print(f"\n[OK] Results successfully exported to '{output_file}'")
 
-def main():
-    instance_path = "./DataCVRP/instances/XML100_1111_01.vrp"
-    solution_path = "./DataCVRP/solutions/XML100_1111_01.sol"
+def result_to_json(results, instance, best_cost):
+    """JSON version of the results"""
+    rows = []
+    for r in results:
+        failed = r["Total Cost"] == "Error"
+        rows.append({
+            "config_type": r["Config Type"],
+            "solver": r["Base Solver"],
+            "optimizer": r["Optimizer"],
+            "total_cost": None if failed else r["Total Cost"],
+            "gap": None if failed else r["Optimality Gap"],
+            "runtime_s": r["Runtime (s)"],
+            "valid": r["Feasible / Valid"],
+            "error": r["Feasible / Valid"] if failed else None,
+        })
+    return {
+        "instance": {
+            "name": instance.name,
+            "customers": instance.dimension - 1,
+            "capacity": instance.capacity,
+        },
+        "best_known_cost": best_cost,
+        "results": rows,
+    }
+
+def _resolve(selection, available, kind, none_means_all):
+    """Turn None / 'all' / 'Name' / ['A', 'B'] into a validated list of names."""
+    if selection is None:
+        return list(available) if none_means_all else []
+    if selection == "all":
+        return list(available)
+    names = [selection] if isinstance(selection, str) else list(selection)
+    unknown = [n for n in names if n not in available]
+    if unknown:
+        raise ValueError(f"Unknown {kind}(s): {unknown}. Available: {list(available)}")
+    return names
+
+def _make_row(config_type, solver_name, opt_name, instance, sol, best_cost, runtime):
+    eval_res = evaluate_solution(instance, sol, best_known_cost=best_cost)
+    cost = getattr(eval_res, "total_cost", getattr(eval_res, "cost", None))
+    gap = ((cost - best_cost) / best_cost) if cost else None
+    return {
+        "Config Type": config_type,
+        "Base Solver": solver_name,
+        "Optimizer": opt_name,
+        "Total Cost": float(cost) if cost is not None else None,
+        "Optimality Gap": gap,
+        "Runtime (s)": round(runtime, 3),
+        "Feasible / Valid": "Yes" if getattr(eval_res, "is_valid", True) else "No",
+    }
+
+def _error_row(config_type, solver_name, opt_name, start, error):
+    return {
+        "Config Type": config_type,
+        "Base Solver": solver_name,
+        "Optimizer": opt_name,
+        "Total Cost": "Error",
+        "Optimality Gap": "N/A",
+        "Runtime (s)": round(time.perf_counter() - start, 3),
+        "Feasible / Valid": f"Failed: {str(error)[:20]}",
+    }
+
+def run_benchmark(
+    instanceName,
+    solvers="all",        # "all", one name, or a list of names
+    optimizers=None,      # None = no optimizer, one name, a list, or "all"
+    export_excel=False,    # True / False
+    ):
+    instance_path = f"./DataCVRP/instances/{instanceName}.vrp"
+    solution_path = f"./DataCVRP/solutions/{instanceName}.sol"
 
     # 1. Load instance and benchmark reference
     instance = load_instance(instance_path, is_local=True)
@@ -151,86 +230,50 @@ def main():
     solver_factories = get_solvers(instance)
     optimizer_factories = get_optimizers()
 
-    results = []
-    initial_solutions = {}
+    solver_names= _resolve(solvers,solver_factories,"solver",none_means_all=True)
+    optimizer_names= _resolve(optimizers,optimizer_factories,"optimizer",none_means_all=False)
 
-    # --- Phase 1: Standalone Solvers ---
-    print("Running Standalone Solvers")
-    for solver_name, solver_builder in solver_factories.items():
+    results=[]
+    initial_solutions={}
+
+    # --- Phase 1: selected standalone solvers ---
+    for solver_name in solver_names:
         print(f" Testing {solver_name}")
         start = time.perf_counter()
         try:
-            solver = solver_builder()
-            sol = solver.solve()
+            sol = solver_factories[solver_name]().solve()
             runtime = time.perf_counter() - start
-
             initial_solutions[solver_name] = sol
-            eval_res = evaluate_solution(instance, sol, best_known_cost=best_cost)
-            cost = getattr(eval_res, "total_cost", getattr(eval_res, "cost", None))
-            gap = ((cost - best_cost) / best_cost) if cost else None
-
-            results.append({
-                "Config Type": "Standalone",
-                "Base Solver": solver_name,
-                "Optimizer": "None",
-                "Total Cost": cost,
-                "Optimality Gap": gap,
-                "Runtime (s)": round(runtime, 3),
-                "Feasible / Valid": "Yes" if getattr(eval_res, "is_valid", True) else "No",
-            })
+            results.append(_make_row("Standalone", solver_name, "None",
+                                     instance, sol, best_cost, runtime))
         except Exception as e:
-            results.append({
-                "Config Type": "Standalone",
-                "Base Solver": solver_name,
-                "Optimizer": "None",
-                "Total Cost": "Error",
-                "Optimality Gap": "N/A",
-                "Runtime (s)": round(time.perf_counter() - start, 3),
-                "Feasible / Valid": f"Failed: {str(e)[:20]}",
-            })
+            results.append(_error_row("Standalone", solver_name, "None", start, e))
 
-    # --- Phase 2: Hybrid Solutions ---
-    print("\nRunning Solver + Optimizer Hybrids")
+    # --- Phase 2: hybrids, only if an optimizer was chosen ---
     for solver_name, init_sol in initial_solutions.items():
         if init_sol is None:
             continue
-
-        for opt_name, opt_builder in optimizer_factories.items():
+        for opt_name in optimizer_names:
             print(f"  -> Testing {solver_name} + {opt_name}...")
             start = time.perf_counter()
             try:
-
-                sol_copy = copy.deepcopy(init_sol)
-                optimizer = opt_builder(sol_copy)
+                optimizer = optimizer_factories[opt_name](copy.deepcopy(init_sol))
                 opt_sol = optimizer.optimize()
                 runtime = time.perf_counter() - start
-
-                eval_res = evaluate_solution(instance, opt_sol, best_known_cost=best_cost)
-                cost = getattr(eval_res, "total_cost", getattr(eval_res, "cost", None))
-                gap = ((cost - best_cost) / best_cost) if cost else None
-
-                results.append({
-                    "Config Type": "Hybrid",
-                    "Base Solver": solver_name,
-                    "Optimizer": opt_name,
-                    "Total Cost": cost,
-                    "Optimality Gap": gap,
-                    "Runtime (s)": round(runtime, 3),
-                    "Feasible / Valid": "Yes" if getattr(eval_res, "is_valid", True) else "No",
-                })
+                results.append(_make_row("Hybrid", solver_name, opt_name,
+                                         instance, opt_sol, best_cost, runtime))
             except Exception as e:
-                results.append({
-                    "Config Type": "Hybrid",
-                    "Base Solver": solver_name,
-                    "Optimizer": opt_name,
-                    "Total Cost": "Error",
-                    "Optimality Gap": "N/A",
-                    "Runtime (s)": round(time.perf_counter() - start, 3),
-                    "Feasible / Valid": f"Failed: {str(e)[:20]}",
-                })
+                results.append(_error_row("Hybrid", solver_name, opt_name, start, e))
 
-    # --- Phase 3: Export to Excel ---
-    export_to_excel(results, instance, best_cost, output_file="cvrp_benchmark_results.xlsx")
+    # --- Phase 3: optional Excel export ---
+    if export_excel:
+        export_to_excel(results, instance, best_cost)
+
+    return result_to_json(results, instance, best_cost)
+    
+def main():
+    run_benchmark(DEFAULT_INSTANCE,solvers='all',optimizers=None,export_excel=True)
+
 
 
 if __name__ == "__main__":
