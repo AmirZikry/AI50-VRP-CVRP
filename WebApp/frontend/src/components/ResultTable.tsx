@@ -24,36 +24,36 @@ const rows = [
 
 export default function ResultsTable() {
   return (
-    <div className="max-w-3xl rounded overflow-hidden shadow-lg">
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
-        <TableHead>
-          <TableRow >
-            <TableCell>Method</TableCell>
-            <TableCell align="center">Type</TableCell>
-            <TableCell align="center">Mean Gap</TableCell>
-            <TableCell align="center">Best Gap</TableCell>
-            <TableCell align="center">Runtime&nbsp;(s)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow
-              key={row.method}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell component="th" scope="row">
-                {row.method}
-              </TableCell>
-              <TableCell align="center">{row.type}</TableCell>
-              <TableCell align="center">{row.meanGap}%</TableCell>
-              <TableCell align="center">{row.bestGap}%</TableCell>
-              <TableCell align="center">{row.Runtime}</TableCell>
+    <div className="w-full rounded overflow-hidden shadow-lg">
+      <TableContainer component={Paper} sx={{ width: '100%' }}>
+        <Table sx={{ width: '100%', tableLayout: 'auto' }} aria-label="results table">
+          <TableHead>
+            <TableRow>
+              <TableCell>Method</TableCell>
+              <TableCell align="center">Type</TableCell>
+              <TableCell align="center">Mean Gap</TableCell>
+              <TableCell align="center">Best Gap</TableCell>
+              <TableCell align="center">Runtime&nbsp;(s)</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow
+                key={row.method}
+                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+              >
+                <TableCell component="th" scope="row">
+                  {row.method}
+                </TableCell>
+                <TableCell align="center">{row.type}</TableCell>
+                <TableCell align="center">{row.meanGap}%</TableCell>
+                <TableCell align="center">{row.bestGap}%</TableCell>
+                <TableCell align="center">{row.Runtime}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </div>
   );
 }
