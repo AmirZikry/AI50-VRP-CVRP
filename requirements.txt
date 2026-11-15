@@ -1,6 +1,8 @@
-tabulate
 numpy
 vrplib
-typing
 openpyxl
 pandas
+fastapi
+uvicorn
+streamlit
+matplotlib
