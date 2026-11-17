@@ -13,30 +13,7 @@ from main import run_benchmark
 
 router=APIRouter(prefix="/solutions", tags=["Solution"])
 
-testsolution= [{
-    "id":1,
-    "method":"Nearest Neighbour",
-    "type":"Heuristic",
-    "bks":30, 
-    "runtime":10,
-    "mean_gap":5,
-    "status_gap":5, 
-    "valid":True,
-    "status":'done',
-    "routes":[[1,2,3,5,8,7,4],[1,3,5,8,7,4,6]], 
-    "total_cost":80
-}
-]
 
-"""
-{
-  "instanceName": "XML100_1111_01",
-  "solvers": ["Clarke-Wright"],
-  "optimizer": "Simulated Annealing"
-}
-"""
-
-#@router.get("/",response_model=list[SolutionResponse])
 @router.post("/")
 def get_solutions(req: BenchmarkRequest):
     try:
