@@ -9,7 +9,7 @@ if str(root_dir) not in sys.path:
 from fastapi import APIRouter, HTTPException,status
 from ..schemas.solutionSchema import SolutionResponse
 from ..schemas.benchmarkSchema import BenchmarkRequest
-from main import run_benchmark
+from main import run_benchmark, stream_result
 
 router=APIRouter(prefix="/solutions", tags=["Solution"])
 
@@ -17,7 +17,7 @@ router=APIRouter(prefix="/solutions", tags=["Solution"])
 @router.post("/")
 def get_solutions(req: BenchmarkRequest):
     try:
-        return run_benchmark(req.instanceName, req.solvers, req.optimizer)
+        return stream_result(req.instanceName, req.solvers, req.optimizer)
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -28,3 +28,6 @@ def get_solutions(req: BenchmarkRequest):
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail=str(e)
         )
+
+    #TODO add ProcessPool Executor parallel execution
+    #TODO Stream Response send answer when done
