@@ -34,7 +34,6 @@ export default function Sidebar() {
   const [instance, setInstance] = useState("XML100_1111_01");
   const [solver, setSolver] = useState("Clarke-Wright");
   const [optimizer, setOptimizer] = useState("none");
-  const [timeLimit, setTimeLimit] = useState(60);
 
   const status = useRunStore((s) => s.status);
   const setStatus = useRunStore((s) => s.setStatus);
@@ -48,7 +47,6 @@ export default function Sidebar() {
       const result = await startRun({
         instance,
         solver,
-        timeLimit,
         optimizer: optimizer === "none" ? null : optimizer,
       });
       addRun(result);
