@@ -4,7 +4,6 @@ export type RunSettings ={
     instance : string;
     solver : string;
     optimizer : string | null; 
-    timeLimit : number;
 
 }
 

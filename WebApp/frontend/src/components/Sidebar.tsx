@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,43 +30,43 @@ const STATUS_LABELS: Record<string, string> = {
 
 
 export default function Sidebar() {
-  const [instance, setInstance] = useState("XML100_1111_01");
-  const [solver, setSolver] = useState("Clarke-Wright");
-  const [optimizer, setOptimizer] = useState("none");
-
+  const settings = useRunStore((s) => s.settings);
+  const setSettings = useRunStore((s) => s.setSettings);
+  const cancelRun = useRunStore((s) => s.cancelRun);
   const status = useRunStore((s) => s.status);
   const setStatus = useRunStore((s) => s.setStatus);
   const run = useRunStore((s) => s.currentRun);
   const addRun = useRunStore((s) => s.addRun);
   const setBatch = useRunStore((s) => s.setBatch);
 
+  const isStale = (token: number) => useRunStore.getState().runToken !== token;
+
   async function handleRun() {
+    const token = useRunStore.getState().runToken;
     setStatus("running");
-    try {
-      const result = await startRun({
-        instance,
-        solver,
-        optimizer: optimizer === "none" ? null : optimizer,
-      });
+  try {
+      const result = await startRun(settings);
+      if (isStale(token)) return;
       addRun(result);
-      setStatus("done");
     } catch {
-      setStatus("failed");
+      if (!isStale(token)) setStatus("failed");
     }
   }
 
   async function handleRunAll() {
+    const token = useRunStore.getState().runToken;
     setStatus("running");
     try {
-      setBatch(await startRunAll(instance));
-      setStatus("done");
+      const results = await startRunAll(settings.instance);
+      if (isStale(token)) return;
+      setBatch(results);
     } catch {
-      setStatus("failed");
+      if (!isStale(token)) setStatus("failed");
     }
   }
 
   function handleCancel() {
-    setStatus("idle");
+    cancelRun();
   }
 
   return (
@@ -85,8 +84,8 @@ export default function Sidebar() {
           <Label htmlFor="instance" className="text-xs font-medium">Instance</Label>
           <Input
             id="instance"
-            value={instance}
-            onChange={(e) => setInstance(e.target.value)}
+            value={settings.instance}
+            onChange={(e) => setSettings({ instance: e.target.value })}
             className="font-mono text-xs bg-background/50 h-9"
           />
         </div>
@@ -94,7 +93,7 @@ export default function Sidebar() {
         {/* Solver */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Solver</Label>
-          <Select value={solver} onValueChange={(val) => val && setSolver(val)}>
+          <Select value={settings.solver} onValueChange={(val) => val && setSettings({solver:val})}>
             <SelectTrigger className="w-full text-xs bg-background/50 h-9">
               <SelectValue />
             </SelectTrigger>
@@ -111,7 +110,8 @@ export default function Sidebar() {
         {/* Optimizer */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Optimizer (hybrid)</Label>
-          <Select value={optimizer} onValueChange={(val) => val && setOptimizer(val)}>
+          <Select value={settings.optimizer ?? "none"} 
+            onValueChange={(val) => val && setSettings({ optimizer: val === "none" ? null : val })}>
             <SelectTrigger className="w-full text-xs bg-background/50 h-9">
               <SelectValue />
             </SelectTrigger>
@@ -124,8 +124,6 @@ export default function Sidebar() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Time Limit */}
       </div>
 
       {/* Action Zone */}
