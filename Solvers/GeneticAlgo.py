@@ -1,6 +1,5 @@
 import random
 import numpy as np
-
 from Models.Routes import Route
 from Models.Solution import Solution
 from Solvers.BaseSolver import BaseVRPSolver
@@ -9,8 +8,8 @@ from Solvers.BaseSolver import BaseVRPSolver
 class GeneticAlgorithmSolver(BaseVRPSolver):
 
     def __init__(self, instance, pop_size=100, generations=500, crossover_rate=0.9,
-                 mutation_rate=0.2, tournament_size=3, elite_size=2,
-                 use_local_search=True, seed=None, verbose=True):
+             mutation_rate=0.2, tournament_size=3, elite_size=2,
+             seed=None, verbose=True):
 
         # --- variables ---
         super().__init__(instance)
@@ -20,7 +19,6 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
         self.mutation_rate = mutation_rate
         self.tournament_size = tournament_size
         self.elite_size = elite_size
-        self.use_local_search = use_local_search
         self.verbose = verbose
         self.rng = random.Random(seed)
 
@@ -66,28 +64,9 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
         routes.reverse()
         return cost[n], routes
 
-    # --- 2-opt ---
-    def _two_opt(self, route):
-        d, depot = self.dist, self.instance.depot
-        path = [depot] + route + [depot]
-        improved = True
-        while improved:
-            improved = False
-            for i in range(1, len(path) - 2):
-                for j in range(i + 1, len(path) - 1):
-                    delta = (d[path[i - 1], path[j]] + d[path[i], path[j + 1]]
-                             - d[path[i - 1], path[i]] - d[path[j], path[j + 1]])
-                    if delta < -1e-9:
-                        path[i:j + 1] = reversed(path[i:j + 1])
-                        improved = True
-        return path[1:-1]
-
-    def _improve(self, tour):
-        _, routes = self._split(tour)
-        new_tour = [c for r in routes for c in self._two_opt(r)]
-        return new_tour
-
     # --- GA operators ---
+
+    # Initialization population
     def _init_population(self):
         pop = []
         coords = self.instance.node_coords
@@ -101,14 +80,17 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
             self.rng.shuffle(t)
             pop.append(t)
         return pop
-    
+
+    # Fitness Evaluation
     def _fitness(self, tour):
         return self._split(tour)[0]
-    
+
+    # Selection (tournament)
     def _tournament(self, pop, fits):
         idx = self.rng.sample(range(len(pop)), self.tournament_size)
         return pop[min(idx, key=lambda i: fits[i])]
 
+    # Crossover (Order Crossover / OX):
     def _order_crossover(self, p1, p2):
         n = len(p1)
         a, b = sorted(self.rng.sample(range(n), 2))
@@ -122,6 +104,7 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
             k += 1
         return child
 
+    # Mutation (Swap / Inversion / Relocate)
     def _mutate(self, tour):
         t = tour[:]
         r = self.rng.random()
@@ -147,7 +130,6 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
             best_indices = sorted(range(len(pop)), key=lambda i: fits[i])[:self.elite_size]
             new_pop = [pop[i][:] for i in best_indices]
 
-            # Breeding loop
             while len(new_pop) < self.pop_size:
                 p1 = self._tournament(pop, fits)
                 p2 = self._tournament(pop, fits)
@@ -159,27 +141,15 @@ class GeneticAlgorithmSolver(BaseVRPSolver):
                     child = self._mutate(child)
                     
                 new_pop.append(child)
-
+            # # Generational replacement
             pop = new_pop
             fits = [self._fitness(t) for t in pop]
-
-            # Apply Local Search (top-5 optimization)
-            if self.use_local_search:
-                top_indices = sorted(range(len(pop)), key=lambda i: fits[i])[:5]
-                for idx in top_indices:
-                    polished = self._improve(pop[idx])
-                    pf = self._fitness(polished)
-                    if pf < fits[idx]:
-                        pop[idx], fits[idx] = polished, pf
 
             # Track global best
             gi = min(range(len(pop)), key=lambda i: fits[i])
             if fits[gi] < best_fit:
                 best_fit, best_tour = fits[gi], pop[gi][:]
             self.history.append(best_fit)
-
-            if self.verbose and (gen % 50 == 0 or gen == self.generations - 1):
-                print(f"Gen {gen:4d} | best = {best_fit:.2f}")
 
         return self._to_solution(best_tour)
     
