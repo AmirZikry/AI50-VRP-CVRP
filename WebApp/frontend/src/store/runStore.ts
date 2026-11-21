@@ -1,23 +1,53 @@
 import {create} from "zustand";
-import type { RunResult } from "@/types";
+import type { RunResult, RunSettings } from "@/types";
 
 type RunStore = {
     status: "idle" | "running" | "done" | "failed";
-    runs: RunResult[];
-    batch: RunResult[]; 
-    currentRun: RunResult | null;
-    setStatus: (s: RunStore["status"]) => void;
+    runToken: number;
+    settings: RunSettings;                              // what the user picked in the sidebar
+    runs: RunResult[];                                  // history of every run (benchmark page)
+    batch: RunResult[];                                 // result of 'run all'
+    currentRun: RunResult | null;                       // result of 'run solver'
+    setStatus: (s: RunStore["status"]) => void;         
+    setSettings: (patch: Partial<RunSettings>) => void;
+    cancelRun: () => void;
     addRun: (r: RunResult) => void;
     setBatch: (b: RunResult[]) => void;
 };
 
+export const DEFAULT_SETTINGS: RunSettings = {
+    instance: "XML100_1111_01",
+    solver: "Clarke-Wright",
+    optimizer: null,
+};
+
 export const useRunStore = create<RunStore>((set) => ({
     status: "idle",
+    settings: DEFAULT_SETTINGS,
     runs: [],
-    currentRun:null,
+    currentRun: null,
     batch: [],
+    runToken: 0,
     setStatus: (status) => set({ status }),
-    addRun: (r) => set((s) => ({ runs: [...s.runs, r], currentRun: r, status: "done" })),
-    setBatch: (batch) => set((s) => ({ batch, runs: [...s.runs, ...batch], status: "done" })),
-}));
 
+    setSettings: (patch) =>
+        set((s) => {
+            const next = { ...s.settings, ...patch };
+            const changed =
+                next.instance !== s.settings.instance ||
+                next.solver !== s.settings.solver ||
+                next.optimizer !== s.settings.optimizer;
+            if (!changed) return { settings: next };
+            return {
+                settings: next,
+                currentRun: null,         // clear the displayed solution
+                batch: [],                // clear the "Run all" result
+                status: "idle",
+                runToken: s.runToken + 1, 
+            };
+        }),
+
+    cancelRun: () => set((s) => ({ status: "idle", runToken: s.runToken + 1 })),
+    addRun: (r) => set((s) => ({ runs: [...s.runs, r], currentRun: r, batch: [], status: "done" })),
+    setBatch: (batch) => set((s) => ({ batch, currentRun: null, runs: [...s.runs, ...batch], status: "done" })),
+}));

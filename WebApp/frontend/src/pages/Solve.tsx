@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { Panel } from "@/components/Panel";
 import { useRunStore } from "@/store/runStore";
 import { Percent, Truck, ShieldCheck, Scale } from "lucide-react";
+import { RunHeader } from "@/components/RunHeader";
 
 export default function Solve() {
   const run = useRunStore((s) => s.currentRun);
@@ -20,6 +21,8 @@ export default function Solve() {
             <BestStrip />
           </div>
 
+          <RunHeader />
+          
           {/* Metric cards locked  */}
           <section className="grid shrink-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
