@@ -128,16 +128,6 @@ export default function Sidebar() {
         </div>
 
         {/* Time Limit */}
-        <div className="space-y-1.5">
-          <Label htmlFor="tl" className="text-xs font-medium">Time limit (seconds)</Label>
-          <Input
-            id="tl"
-            type="number"
-            value={timeLimit}
-            onChange={(e) => setTimeLimit(Number(e.target.value))}
-            className="text-xs bg-background/50 h-9"
-          />
-        </div>
       </div>
 
       {/* Action Zone */}
