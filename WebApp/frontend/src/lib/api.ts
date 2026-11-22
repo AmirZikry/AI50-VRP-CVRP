@@ -1,6 +1,8 @@
 // frontend that will call backend nanti 
 import type { RunSettings, RunResult } from "@/types";
 
+const API_URL = import.meta.env.FASTAPI_APP_URL || "http://localhost:8000";
+
 // fake data :
 export async function startRun(s: RunSettings): Promise <RunResult> {
     await new Promise((r) => setTimeout(r,1000));
@@ -45,4 +47,14 @@ export async function startRunAll(_instance: string): Promise<RunResult[]> {
     row("Clarke-Wright", "Simulated Annealing", 30553.46, 2.23, 1.727),
     row("Ant Colony", "Simulated Annealing", 33247.82, 11.24, 31.4),
   ];
+}
+
+export async function getInstanceList(signal?: AbortSignal) {
+  const res = await fetch(`${API_URL}/options`, { signal });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch options (${res.status})`);
+  }
+
+  return res.json();
 }

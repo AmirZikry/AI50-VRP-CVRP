@@ -2,13 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers.solution import router as solutionRouter
 from .routers.option import router as optionRouter
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 app = FastAPI(
 title="CVRP API",
 version="1.0.0",
 )
 
-origin="http://localhost:5173" # react app
+origin = os.getenv("REACT_APP_URL") 
 
 app.add_middleware(
     CORSMiddleware,
