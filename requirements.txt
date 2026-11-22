@@ -4,3 +4,4 @@ vrplib
 typing
 openpyxl
 pandas
+websockets
