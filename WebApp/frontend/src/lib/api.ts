@@ -81,3 +81,18 @@ export async function startRunAll(instance: string): Promise<RunResult[]> {
   if (ok.length === 0) throw new Error("All runs failed.");
   return ok;
 }
+
+let instanceNames: Promise<string[]> | null = null;
+export function getInstanceNames(): Promise<string[]> {
+  instanceNames ??= fetch(`${API_URL}/options/`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Could not load the instance list (${res.status}).`);
+      return res.json();
+    })
+    .then((data) => data.instances as string[])
+    .catch((e) => {
+      instanceNames = null;                              
+      throw new Error(e instanceof TypeError ? `Cannot reach the backend at ${API_URL}.` : e.message);
+    });
+  return instanceNames;
+}

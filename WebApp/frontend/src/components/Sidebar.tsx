@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -8,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import InstancePicker from "@/components/InstancePicker";
 import { startRun, startRunAll } from "@/lib/api";
 import { useRunStore } from "@/store/runStore";
 
@@ -70,7 +69,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
+    <aside className="w-full lg:w-96 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration
@@ -80,16 +79,7 @@ export default function Sidebar() {
 
       <div className="space-y-4">
         {/* Instance */}
-        <div className="space-y-1.5">
-          <Label htmlFor="instance" className="text-xs font-medium">Instance</Label>
-          <Input
-            id="instance"
-            value={settings.instance}
-            onChange={(e) => setSettings({ instance: e.target.value })}
-            className="font-mono text-xs bg-background/50 h-9"
-          />
-        </div>
-
+        <InstancePicker />
         {/* Solver */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Solver</Label>
