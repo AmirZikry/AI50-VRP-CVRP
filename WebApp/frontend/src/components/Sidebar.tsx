@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,17 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { startRun, startRunAll, fetchInstanceData } from "@/lib/api";
-import { useRunStore } from "@/store/runStore";
 
-const SOLVERS = [
-  "Clarke-Wright",
-  "Nearest Neighbor",
-  "Cheapest Insertion",
-  "Genetic Algorithm",
-  "Ant Colony",
-];
-const OPTIMIZERS = ["none", "Simulated Annealing", "Tabu Search"];
+import { startRun, startRunAll, getInstanceList, fetchInstanceData} from "@/lib/api";
+import InstancePicker from "@/components/InstancePicker";
+import { useRunStore } from "@/store/runStore";
+import { useEffect, useState } from "react";
+
 
 const STATUS_LABELS: Record<string, string> = {
   idle: "Ready",
@@ -28,8 +22,9 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "Failed",
 };
 
-
 export default function Sidebar() {
+  const [solvers, setSolvers] = useState<string[]>([]);
+  const [optimizers, setOptimizers] = useState<string[]>(["none"]);
   const settings = useRunStore((s) => s.settings);
   const setSettings = useRunStore((s) => s.setSettings);
   const cancelRun = useRunStore((s) => s.cancelRun);
@@ -41,12 +36,29 @@ export default function Sidebar() {
   const setInstanceData = useRunStore((s) => s.setInstanceData);
   const instanceData = useRunStore((s) => s.instanceData);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getInstanceList(controller.signal)
+      .then((data) => {
+        const solverList = Array.isArray(data?.solvers) ? data.solvers : [];
+        setSolvers(solverList);
+        const optimizerList = Array.isArray(data?.optimizers) ? data.optimizers : [];
+        setOptimizers(["None", ...optimizerList]);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
+      });
+
+    return () => controller.abort();
+  }, []);
+
   const isStale = (token: number) => useRunStore.getState().runToken !== token;
 
   async function handleRun() {
     const token = useRunStore.getState().runToken;
     setStatus("running");
-  try {
+    try {
       const result = await startRun(settings);
       if (isStale(token)) return;
       addRun(result);
@@ -78,7 +90,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
+    <aside className="w-full lg:w-96 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration
@@ -88,27 +100,22 @@ export default function Sidebar() {
 
       <div className="space-y-4">
         {/* Instance */}
-        <div className="space-y-1.5">
-          <Label htmlFor="instance" className="text-xs font-medium">Instance</Label>
-          <Input
-            id="instance"
-            value={settings.instance}
-            onChange={(e) => setSettings({ instance: e.target.value })}
-            className="font-mono text-xs bg-background/50 h-9"
-          />
-        </div>
-
+        <InstancePicker />
         {/* Solver */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Solver</Label>
-          <Select value={settings.solver} onValueChange={(val) => val && setSettings({solver:val})}>
-            <SelectTrigger className="w-full text-xs bg-background/50 h-9">
-              <SelectValue />
+          <Select
+            value={settings.solver}
+            onValueChange={(value) => value && setSettings({ solver: value })}
+            disabled={solvers.length === 0}
+          >
+            <SelectTrigger id="solver" className="w-full font-mono text-xs bg-background/50 h-9">
+              <SelectValue placeholder="Select a solver..." />
             </SelectTrigger>
             <SelectContent>
-              {SOLVERS.map((s) => (
-                <SelectItem key={s} value={s} className="text-xs">
-                  {s}
+              {solvers.map((solver) => (
+                <SelectItem key={solver} value={solver} className="font-mono text-xs">
+                  {solver}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -118,15 +125,18 @@ export default function Sidebar() {
         {/* Optimizer */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Optimizer (hybrid)</Label>
-          <Select value={settings.optimizer ?? "none"} 
-            onValueChange={(val) => val && setSettings({ optimizer: val === "none" ? null : val })}>
-            <SelectTrigger className="w-full text-xs bg-background/50 h-9">
-              <SelectValue />
+          <Select
+            value={settings.optimizer ?? "None"}
+            onValueChange={(value) => value && setSettings({ optimizer: value })}
+            disabled={optimizers.length === 0}
+          >
+            <SelectTrigger id="optimizer" className="w-full font-mono text-xs bg-background/50 h-9">
+              <SelectValue placeholder="Select an optimizer..." />
             </SelectTrigger>
             <SelectContent>
-              {OPTIMIZERS.map((o) => (
-                <SelectItem key={o} value={o} className="text-xs">
-                  {o === "none" ? "None" : o}
+              {optimizers.map((opt) => (
+                <SelectItem key={opt} value={opt} className="font-mono text-xs">
+                  {opt}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -136,8 +146,6 @@ export default function Sidebar() {
 
       {/* Action Zone */}
       <div className="mt-auto pt-4 flex flex-col gap-2.5 border-t border-border/60">
-        
-        {/* 1. Status Bar directly above "Run solver" */}
         <div className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-xs">
           <span
             className={`h-2.5 w-2.5 rounded-full shrink-0 ${
@@ -161,7 +169,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* 2. Run solver button */}
         <Button
           onClick={handleRun}
           disabled={status === "running"}
@@ -170,7 +177,6 @@ export default function Sidebar() {
           {status === "running" ? "Running..." : "Run solver"}
         </Button>
 
-        {/* 3. Cancel button */}
         {status === "running" && (
           <Button
             variant="outline"
@@ -181,7 +187,6 @@ export default function Sidebar() {
           </Button>
         )}
 
-        {/* 4. Batch runner */}
         <Button
           variant="outline"
           onClick={handleRunAll}
