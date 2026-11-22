@@ -1,0 +1,41 @@
+import io.sarl.lang.core.Event
+
+/** Represents a customer delivery stop with coordinates and cargo demand.
+ */
+class VrpTask {
+	public val id : String
+	public val demand : int
+	public val x : int
+	public val y : int
+
+	new(id : String, demand : int, x : int, y : int) {
+		this.id = id
+		this.demand = demand
+		this.x = x
+		this.y = y
+	}
+}
+
+/** Broadcast by the dispatcher once all vehicles are initialized.
+ */
+event StartSimulation extends Event {
+}
+
+/** Sent by each vehicle to report its final route sequence and total distance.
+ */
+event RouteCost extends Event {
+	public val vehicleId : int
+	public val cost : long
+	public val route : String
+
+	new(vehicleId : int, cost : long, route : String) {
+		this.vehicleId = vehicleId
+		this.cost = cost
+		this.route = route
+	}
+}
+
+/** Sent by each vehicle upon initialization to confirm readiness.
+ */
+event VehicleReady extends Event {
+}

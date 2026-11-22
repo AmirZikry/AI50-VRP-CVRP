@@ -1,0 +1,13 @@
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+
+/** Entry-point agent that launches the dispatcher server on port 8765 and terminates itself.
+ */
+agent BootAgent {
+	uses Lifecycle
+
+	on Initialize {
+		spawn(typeof(DispatcherAgent), 8765)
+		killMe
+	}
+}

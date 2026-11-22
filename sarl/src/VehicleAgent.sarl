@@ -1,0 +1,351 @@
+import io.sarl.api.core.DefaultContextInteractions
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Schedules
+import java.util.ArrayList
+import java.util.Collections
+import java.util.List
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+
+/** Autonomous vehicle agent that claims customer tasks, optimizes routes, and reports final tour costs.
+ */
+agent VehicleAgent {
+	uses DefaultContextInteractions, Lifecycle, Schedules
+
+	var myCapacity : int
+	var depotX : int
+	var depotY : int
+	var vehicleId : int
+	var totalVehicles : int
+
+	var board : ConcurrentHashMap<String, VrpTask>
+	var sharedRoutes : ConcurrentHashMap<Integer, List<VrpTask>>
+	var clusteredCount : AtomicInteger
+	var optimizationDone : AtomicBoolean
+
+	var tspBestCost : long
+	var tspBestOrder : List<VrpTask>
+
+	/** Stores vehicle parameters and notifies the dispatcher that this agent is ready.
+	 */
+	on Initialize {
+		this.myCapacity = occurrence.parameters.get(0) as Integer
+		this.depotX = occurrence.parameters.get(1) as Integer
+		this.depotY = occurrence.parameters.get(2) as Integer
+		this.board = occurrence.parameters.get(3) as ConcurrentHashMap<String, VrpTask>
+		this.vehicleId = occurrence.parameters.get(4) as Integer
+		this.totalVehicles = occurrence.parameters.get(5) as Integer
+		this.sharedRoutes = occurrence.parameters.get(6) as ConcurrentHashMap<Integer, List<VrpTask>>
+		this.clusteredCount = occurrence.parameters.get(7) as AtomicInteger
+		this.optimizationDone = occurrence.parameters.get(8) as AtomicBoolean
+
+		emit(new VehicleReady())
+	}
+
+	/** Builds an initial cluster, synchronizes fleet-wide route optimization, and reports its final route.
+	 */
+	on StartSimulation {
+		val myCluster = buildInitialCluster()
+		this.sharedRoutes.put(this.vehicleId, exactTspOrder(myCluster))
+
+		// The last vehicle to finish clustering runs cross-route optimization while others wait
+		if (this.clusteredCount.incrementAndGet() == this.totalVehicles) {
+			optimizeAllRoutes()
+			this.optimizationDone.set(true)
+		} else {
+			while (!this.optimizationDone.get())
+				Thread.sleep(2)
+		}
+
+		val finalRoute = this.sharedRoutes.get(this.vehicleId)
+		val routeStr = finalRoute.map[id].join(" ")
+		emit(new RouteCost(this.vehicleId, closedTourCost(finalRoute), routeStr))
+		in(50)[killMe]
+	}
+
+	/** Phase 1: Locks the board, picks the farthest feasible customer as a seed, and greedily adds lowest-cost stops.
+	 */
+	def buildInitialCluster : List<VrpTask> {
+		val cluster = new ArrayList<VrpTask>()
+		var remainingCap = this.myCapacity
+
+		synchronized (this.board) {
+			var seed : VrpTask = null
+			var maxDepotDist = -1L
+			for (t : this.board.values) {
+				if (t.demand <= remainingCap && distToDepot(t) > maxDepotDist) {
+					maxDepotDist = distToDepot(t)
+					seed = t
+				}
+			}
+			if(seed === null) return cluster
+
+			this.board.remove(seed.id)
+			cluster.add(seed)
+			remainingCap -= seed.demand
+
+			while (remainingCap > 0 && !this.board.isEmpty) {
+				val currentCost = exactTspCost(cluster)
+				var bestCand : VrpTask = null
+				var minAdded = Long.MAX_VALUE
+
+				for (cand : this.board.values) {
+					if (cand.demand <= remainingCap) {
+						val trial = new ArrayList<VrpTask>(cluster)
+						trial.add(cand)
+						val added = exactTspCost(trial) - currentCost
+						if (added < minAdded) {
+							minAdded = added
+							bestCand = cand
+						}
+					}
+				}
+
+				if(bestCand === null) return cluster
+				this.board.remove(bestCand.id)
+				cluster.add(bestCand)
+				remainingCap -= bestCand.demand
+			}
+		}
+		return cluster
+	}
+
+	/** Phase 2: Iteratively applies inter-route 1-for-1 swaps and tail exchanges, then polishes routes with exact TSP.
+	 */
+	def optimizeAllRoutes {
+		synchronized (this.sharedRoutes) {
+			var improved = true
+			while (improved) {
+				improved = false
+				for (i : 1 ..< this.totalVehicles) {
+					for (j : i + 1 .. this.totalVehicles) {
+						val r1 = this.sharedRoutes.get(i)
+						val r2 = this.sharedRoutes.get(j)
+						val baseCost = closedTourCost(r1) + closedTourCost(r2)
+
+						val move = bestSwapMove(r1, r2, baseCost) ?: bestTailExchangeMove(r1, r2, baseCost)
+						if (move !== null) {
+							this.sharedRoutes.put(i, move.get(0))
+							this.sharedRoutes.put(j, move.get(1))
+							improved = true
+						}
+					}
+				}
+			}
+
+			// Run exact Branch-and-Bound TSP on final routes with up to 14 stops
+			for (v : 1 .. this.totalVehicles) {
+				val r = this.sharedRoutes.get(v)
+				if (r !== null && r.size <= 14) {
+					this.sharedRoutes.put(v, branchAndBoundTsp(r))
+				}
+			}
+		}
+	}
+
+	/** Finds the best capacity-valid 1-for-1 customer exchange between two routes.
+	 */
+	def bestSwapMove(r1 : List<VrpTask>, r2 : List<VrpTask>, baseCost : long) : List<List<VrpTask>> {
+		var bestCost = baseCost
+		var bestPair : List<List<VrpTask>> = null
+		val cap1 = routeDemand(r1)
+		val cap2 = routeDemand(r2)
+
+		for (idx1 : 0 ..< r1.size) {
+			for (idx2 : 0 ..< r2.size) {
+				val t1 = r1.get(idx1)
+				val t2 = r2.get(idx2)
+				if (cap1 - t1.demand + t2.demand <= this.myCapacity &&
+					cap2 - t2.demand + t1.demand <= this.myCapacity) {
+					val cand1 = new ArrayList<VrpTask>(r1) => [set(idx1, t2)]
+					val cand2 = new ArrayList<VrpTask>(r2) => [set(idx2, t1)]
+					val ord1 = exactTspOrder(cand1)
+					val ord2 = exactTspOrder(cand2)
+					val cost = closedTourCost(ord1) + closedTourCost(ord2)
+					if (cost < bestCost) {
+						bestCost = cost
+						bestPair = #[ord1, ord2]
+					}
+				}
+			}
+		}
+		return bestPair
+	}
+
+	/** Finds the best capacity-valid tail-segment swap (2-Opt*) between two routes.
+	 */
+	def bestTailExchangeMove(r1 : List<VrpTask>, r2 : List<VrpTask>, baseCost : long) : List<List<VrpTask>> {
+		var bestCost = baseCost
+		var bestPair : List<List<VrpTask>> = null
+
+		for (cut1 : 0 .. r1.size) {
+			for (cut2 : 0 .. r2.size) {
+				val cand1 = new ArrayList<VrpTask>(r1.subList(0, cut1))
+				cand1.addAll(r2.subList(cut2, r2.size))
+
+				val cand2 = new ArrayList<VrpTask>(r2.subList(0, cut2))
+				cand2.addAll(r1.subList(cut1, r1.size))
+
+				if (routeDemand(cand1) <= this.myCapacity && routeDemand(cand2) <= this.myCapacity) {
+					val ord1 = exactTspOrder(cand1)
+					val ord2 = exactTspOrder(cand2)
+					val cost = closedTourCost(ord1) + closedTourCost(ord2)
+					if (cost < bestCost) {
+						bestCost = cost
+						bestPair = #[ord1, ord2]
+					}
+				}
+			}
+		}
+		return bestPair
+	}
+
+	/** Sums total customer demand along a route.
+	 */
+	def routeDemand(tasks : List<VrpTask>) : int {
+		var sum = 0
+		for (t : tasks)
+			sum += t.demand
+		return sum
+	}
+
+	/** Computes rounded 2D Euclidean distance between two points.
+	 */
+	def euc2d(x1 : int, y1 : int, x2 : int, y2 : int) : long {
+		val dx = (x1 - x2) as double
+		val dy = (y1 - y2) as double
+		return Math.round(Math.sqrt(dx * dx + dy * dy))
+	}
+
+	def distToDepot(t : VrpTask) : long {
+		euc2d(this.depotX, this.depotY, t.x, t.y)
+	}
+
+	def dist(a : VrpTask, b : VrpTask) : long {
+		euc2d(a.x, a.y, b.x, b.y)
+	}
+
+	/** Computes total distance of a round-trip tour starting and ending at the depot.
+	 */
+	def closedTourCost(ordered : List<VrpTask>) : long {
+		if(ordered === null || ordered.isEmpty) return 0L
+		var cost = distToDepot(ordered.get(0)) + distToDepot(ordered.get(ordered.size - 1))
+		for (i : 0 ..< ordered.size - 1) {
+			cost += dist(ordered.get(i), ordered.get(i + 1))
+		}
+		return cost
+	}
+
+	/** Uses exact Branch-and-Bound for up to 7 stops, or fast heuristics for larger clusters.
+	 */
+	def exactTspOrder(tasks : List<VrpTask>) : List<VrpTask> {
+		if (tasks === null || tasks.size <= 1) {
+			return if(tasks === null) new ArrayList<VrpTask>() else new ArrayList<VrpTask>(tasks)
+		}
+		return if(tasks.size <= 7) branchAndBoundTsp(tasks) else twoOptAndOrOptTsp(tasks)
+	}
+
+	def exactTspCost(tasks : List<VrpTask>) : long {
+		closedTourCost(exactTspOrder(tasks))
+	}
+
+	/** Builds a Nearest-Neighbor tour and refines it via 2-Opt segment reversals and Or-Opt node shifts.
+	 */
+	def twoOptAndOrOptTsp(tasks : List<VrpTask>) : List<VrpTask> {
+		val unvisited = new ArrayList<VrpTask>(tasks)
+		var tour = new ArrayList<VrpTask>(tasks.size)
+		var cx = this.depotX
+		var cy = this.depotY
+
+		// Greedy Nearest-Neighbor construction
+		while (!unvisited.isEmpty) {
+			var bestIdx = 0
+			var bestD = Long.MAX_VALUE
+			for (i : 0 ..< unvisited.size) {
+				val d = euc2d(cx, cy, unvisited.get(i).x, unvisited.get(i).y)
+				if (d < bestD) {
+					bestD = d
+					bestIdx = i
+				}
+			}
+			val chosen = unvisited.remove(bestIdx)
+			tour.add(chosen)
+			cx = chosen.x
+			cy = chosen.y
+		}
+
+		// Local search improvement loop (2-Opt followed by Or-Opt)
+		var bestCost = closedTourCost(tour)
+		var improved = true
+		while (improved) {
+			improved = false
+			for (i : 0 ..< tour.size - 1) {
+				for (j : i + 1 ..< tour.size) {
+					val cand = new ArrayList<VrpTask>(tour)
+					Collections.reverse(cand.subList(i, j + 1))
+					val c = closedTourCost(cand)
+					if (c < bestCost) {
+						bestCost = c
+						tour = cand
+						improved = true
+					}
+				}
+			}
+			for (i : 0 ..< tour.size) {
+				for (j : 0 ..< tour.size) {
+					if (i != j) {
+						val cand = new ArrayList<VrpTask>(tour)
+						if(i < j) Collections.rotate(cand.subList(i, j + 1), -1) else Collections.rotate(
+							cand.subList(j, i + 1), 1)
+						val c = closedTourCost(cand)
+						if (c < bestCost) {
+							bestCost = c
+							tour = cand
+							improved = true
+						}
+					}
+				}
+			}
+		}
+		return tour
+	}
+
+	/** Finds the exact shortest closed tour via depth-first search pruned by a heuristic upper bound.
+	 */
+	def branchAndBoundTsp(tasks : List<VrpTask>) : List<VrpTask> {
+		if(tasks.size <= 1) return new ArrayList<VrpTask>(tasks)
+		val seed = twoOptAndOrOptTsp(tasks)
+		this.tspBestOrder = seed
+		this.tspBestCost = closedTourCost(seed)
+		dfsTsp(tasks, newBooleanArrayOfSize(tasks.size), new ArrayList<VrpTask>(tasks.size), 0L)
+		return this.tspBestOrder
+	}
+
+	/** Recursive DFS helper that prunes branches exceeding the best known tour cost.
+	 */
+	def dfsTsp(tasks : List<VrpTask>, used : boolean[], current : List<VrpTask>, currentCost : long) {
+		if (current.size == tasks.size) {
+			val total = currentCost + distToDepot(current.get(current.size - 1))
+			if (total < this.tspBestCost) {
+				this.tspBestCost = total
+				this.tspBestOrder = new ArrayList<VrpTask>(current)
+			}
+			return
+		}
+		for (i : 0 ..< tasks.size) {
+			if (!used.get(i)) {
+				val next = tasks.get(i)
+				val stepCost = if(current.isEmpty) distToDepot(next) else dist(current.get(current.size - 1), next)
+				if (currentCost + stepCost < this.tspBestCost) {
+					used.set(i, true)
+					current.add(next)
+					dfsTsp(tasks, used, current, currentCost + stepCost)
+					current.remove(current.size - 1)
+					used.set(i, false)
+				}
+			}
+		}
+	}
+}
