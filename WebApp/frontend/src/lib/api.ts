@@ -82,6 +82,7 @@ export async function startRunAll(instance: string): Promise<RunResult[]> {
   return ok;
 }
 
+// Names of every instance the backend knows (GET /options/). Fetched once, then reused.
 let instanceNames: Promise<string[]> | null = null;
 export function getInstanceNames(): Promise<string[]> {
   instanceNames ??= fetch(`${API_URL}/options/`)
@@ -91,8 +92,19 @@ export function getInstanceNames(): Promise<string[]> {
     })
     .then((data) => data.instances as string[])
     .catch((e) => {
-      instanceNames = null;                              
+      instanceNames = null;
       throw new Error(e instanceof TypeError ? `Cannot reach the backend at ${API_URL}.` : e.message);
     });
   return instanceNames;
+}
+
+// Used by Sidebar to fill the solver / optimizer dropdowns (GET /options/)
+export async function getInstanceList(signal?: AbortSignal) {
+  const res = await fetch(`${API_URL}/options/`, { signal });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch options (${res.status})`);
+  }
+
+  return res.json();
 }

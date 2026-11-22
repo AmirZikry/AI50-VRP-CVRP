@@ -50,7 +50,7 @@ def get_instances():
     files=[]
     for file in contents:
         files.append(Path(file).stem)
-    return files
+    return files[:500]
 
 def get_solvers(instance):
     """defining all solvers."""
