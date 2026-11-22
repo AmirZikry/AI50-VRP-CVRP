@@ -1,48 +1,110 @@
-// frontend that will call backend nanti 
-import type { RunSettings, RunResult } from "@/types";
+import type { RunSettings, RunResult, RunType } from "@/types";
 
-// fake data :
-export async function startRun(s: RunSettings): Promise <RunResult> {
-    await new Promise((r) => setTimeout(r,1000));
-    return {
-        id: crypto.randomUUID(),
-        instance: s.instance,
-        solver: s.solver,
-        optimizer: s.optimizer,
-        cost: 30553.6,
-        gap:2.23,
-        vehicles: 25,
-        runtime: 1.65,
-        valid: true,
-        routes : [[0,24,54,53,81,0]],
-        history:[]
+const API_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-    }
+type ApiRow = {
+  type: RunType;
+  solver: string;
+  optimizer: string | null;
+  cost: number | null;
+  gap: number | null;
+  vehicles: number | null;
+  valid: boolean;
+  runtime: number;
+  routes: number[][];
+  history: { t: number; cost: number }[];
+  error: string | null;
+};
+
+async function postSolutions(
+  instanceName: string,
+  solvers: string[] | "all",
+  optimizer: string | null,
+): Promise<ApiRow[]> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/solutions/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceName, solvers, optimizer }),
+    });
+  } catch {
+    throw new Error(`Cannot reach the backend at ${API_URL}. Is it running?`);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(typeof body?.detail === "string" ? body.detail : `Request failed (${res.status})`);
+  }
+  return res.json();
 }
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// ApiRow (backend) -> RunResult 
+function toRunResult(row: ApiRow, instance: string): RunResult {
+  if (row.error || row.cost === null || row.gap === null || row.vehicles === null) {
+    throw new Error(row.error ?? "The run failed");
+  }
+  return {
+    id: crypto.randomUUID(),
+    instance,
+    type: row.type,
+    solver: row.solver,
+    optimizer: row.optimizer,
+    cost: row.cost,
+    gap: row.gap,
+    vehicles: row.vehicles,
+    runtime: row.runtime,
+    valid: row.valid,
+    routes: row.routes,
+    history: row.history,
+  };
+}
 
-const row = (
-  solver: string, optimizer: string | null,
-  cost: number, gap: number, runtime: number
-): RunResult => ({
-  id: crypto.randomUUID(),
-  instance: "XML100_1111_01",
-  solver, optimizer, cost, gap, runtime,
-  vehicles: 25,            // placeholder
-  valid: true,
-  routes: [],
-  history: [],
-});
+// "Run solver": one solver with or w/o solver
+export async function startRun(s: RunSettings): Promise<RunResult> {
+  const rows = await postSolutions(s.instance, [s.solver], s.optimizer);
+  const row = rows.find((r) => r.optimizer === s.optimizer);
+  if (!row) throw new Error("The backend returned no result for this configuration.");
+  return toRunResult(row, s.instance);
+}
 
-export async function startRunAll(_instance: string): Promise<RunResult[]> {
-  await delay(1500);
-  return [
-    row("Nearest Neighbor", null, 32366.34, 8.29, 0.002),
-    row("Cheapest Insertion", null, 31328.04, 4.82, 0.010),
-    row("Clarke-Wright", null, 30619.31, 2.45, 0.029),
-    row("Genetic Algorithm", null, 31938.48, 6.86, 7.086),
-    row("Clarke-Wright", "Simulated Annealing", 30553.46, 2.23, 1.727),
-    row("Ant Colony", "Simulated Annealing", 33247.82, 11.24, 31.4),
-  ];
+// "Run all": every solver (15 rows)
+export async function startRunAll(instance: string): Promise<RunResult[]> {
+  const rows = await postSolutions(instance, "all", "all");
+  const ok: RunResult[] = [];
+  for (const row of rows) {
+    try {
+      ok.push(toRunResult(row, instance));
+    } catch (e) {
+      console.warn(`${row.solver} + ${row.optimizer} failed:`, (e as Error).message);   // skip failed rows
+    }
+  }
+  if (ok.length === 0) throw new Error("All runs failed.");
+  return ok;
+}
+
+// Names of every instance the backend knows (GET /options/). Fetched once, then reused.
+let instanceNames: Promise<string[]> | null = null;
+export function getInstanceNames(): Promise<string[]> {
+  instanceNames ??= fetch(`${API_URL}/options/`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Could not load the instance list (${res.status}).`);
+      return res.json();
+    })
+    .then((data) => data.instances as string[])
+    .catch((e) => {
+      instanceNames = null;
+      throw new Error(e instanceof TypeError ? `Cannot reach the backend at ${API_URL}.` : e.message);
+    });
+  return instanceNames;
+}
+
+// Used by Sidebar to fill the solver / optimizer dropdowns (GET /options/)
+export async function getInstanceList(signal?: AbortSignal) {
+  const res = await fetch(`${API_URL}/options/`, { signal });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch options (${res.status})`);
+  }
+
+  return res.json();
 }
