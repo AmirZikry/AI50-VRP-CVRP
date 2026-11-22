@@ -1,9 +1,48 @@
 // frontend that will call backend nanti 
-import type { RunSettings, RunResult } from "@/types";
+import type { RunSettings, RunResult, InstanceData } from "@/types";
 
 // fake data :
 export async function startRun(s: RunSettings): Promise <RunResult> {
     await new Promise((r) => setTimeout(r,1000));
+
+    // Generate a few sample routes with convergence history
+    const routes = [
+      [0,24,54,53,81,0],
+      [0,3,10,16,42,0],
+      [0,8,9,13,96,0],
+      [0,2,14,20,21,23,0],
+      [0,4,5,7,18,19,12,0],
+      [0,6,22,97,15,0],
+      [0,11,1,99,100,0],
+      [0,17,46,47,48,0],
+      [0,25,26,27,28,0],
+      [0,29,30,31,32,33,0],
+      [0,34,35,36,37,0],
+      [0,38,39,40,41,0],
+      [0,43,44,45,49,0],
+      [0,50,51,52,55,0],
+      [0,56,57,58,59,0],
+      [0,60,61,62,63,64,0],
+      [0,65,66,67,68,0],
+      [0,69,70,71,72,0],
+      [0,73,74,75,76,0],
+      [0,77,78,79,80,0],
+      [0,82,83,84,85,0],
+      [0,86,87,88,89,0],
+      [0,90,91,92,93,0],
+      [0,94,95,98,0],
+    ];
+
+    // Build a mock convergence history
+    const history: { t: number; cost: number }[] = [];
+    let c = 42000;
+    for (let i = 0; i < 50; i++) {
+      c -= Math.random() * 400 * Math.exp(-i / 15);
+      history.push({ t: i, cost: Math.round(c * 100) / 100 });
+    }
+    // Ensure last matches reported cost
+    history[history.length - 1].cost = 30553.6;
+
     return {
         id: crypto.randomUUID(),
         instance: s.instance,
@@ -11,12 +50,11 @@ export async function startRun(s: RunSettings): Promise <RunResult> {
         optimizer: s.optimizer,
         cost: 30553.6,
         gap:2.23,
-        vehicles: 25,
+        vehicles: routes.length,
         runtime: 1.65,
         valid: true,
-        routes : [[0,24,54,53,81,0]],
-        history:[]
-
+        routes,
+        history,
     }
 }
 
@@ -45,4 +83,44 @@ export async function startRunAll(_instance: string): Promise<RunResult[]> {
     row("Clarke-Wright", "Simulated Annealing", 30553.46, 2.23, 1.727),
     row("Ant Colony", "Simulated Annealing", 33247.82, 11.24, 31.4),
   ];
+}
+
+/** Fetch instance geometry (coords + demands) for route visualisation.
+ *  Uses mock data matching XML100_1111_01 until backend endpoint is wired. */
+export async function fetchInstanceData(instanceName: string): Promise<InstanceData> {
+  // TODO: replace with real API call: GET /options/instance/{instanceName}
+  // For now, generate deterministic coordinates from the VRP file dimensions
+
+  await delay(200);
+
+  // Seed-based pseudo-random for reproducibility
+  const seed = instanceName.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rng = (i: number) => {
+    const x = Math.sin(seed * 9301 + i * 49297) * 49297;
+    return x - Math.floor(x);
+  };
+
+  const dimension = 101;
+  const coords: [number, number][] = [];
+  const demands: number[] = [0]; // depot demand = 0
+
+  // Depot
+  coords.push([Math.round(rng(0) * 1000), Math.round(rng(1) * 1000)]);
+
+  // Customers
+  for (let i = 1; i < dimension; i++) {
+    coords.push([
+      Math.round(rng(i * 2) * 1000),
+      Math.round(rng(i * 2 + 1) * 1000),
+    ]);
+    demands.push(1); // XML100 instances typically have demand=1 with low capacity
+  }
+
+  return {
+    name: instanceName,
+    dimension,
+    capacity: 4,
+    coords,
+    demands,
+  };
 }

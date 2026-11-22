@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { startRun, startRunAll } from "@/lib/api";
+import { startRun, startRunAll, fetchInstanceData } from "@/lib/api";
 import { useRunStore } from "@/store/runStore";
 
 const SOLVERS = [
@@ -38,6 +38,8 @@ export default function Sidebar() {
   const run = useRunStore((s) => s.currentRun);
   const addRun = useRunStore((s) => s.addRun);
   const setBatch = useRunStore((s) => s.setBatch);
+  const setInstanceData = useRunStore((s) => s.setInstanceData);
+  const instanceData = useRunStore((s) => s.instanceData);
 
   const isStale = (token: number) => useRunStore.getState().runToken !== token;
 
@@ -48,6 +50,12 @@ export default function Sidebar() {
       const result = await startRun(settings);
       if (isStale(token)) return;
       addRun(result);
+      // Fetch instance node data for route visualisation if not cached
+      if (!useRunStore.getState().instanceData || useRunStore.getState().instanceData?.name !== settings.instance) {
+        fetchInstanceData(settings.instance).then((d) => {
+          if (!isStale(token)) setInstanceData(d);
+        });
+      }
     } catch {
       if (!isStale(token)) setStatus("failed");
     }
