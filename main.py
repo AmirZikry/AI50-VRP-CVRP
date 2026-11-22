@@ -230,29 +230,39 @@ def _resolve(selection, available_names, kind, none_means_all=True):
         raise ValueError(f"Unknown {kind}(s): {unknown}. Available: {list(available_names)}")
     return names
 
+SOLVER_TYPES = {
+    "Nearest Neighbor" : "Heuristic",
+    "Cheapest Insertion" : "Heuristic",
+    "Clarke-Wright" : "Heuristic",
+    "Genetic Algorithm" : "Metaheuristic",
+    "Ant Colony" : "Metaheuristic",
+    }
+
 def _make_row(config_type, solver_name, opt_name, instance, sol, best_cost, runtime):
-    eval_res = evaluate_solution(instance, sol, best_known_cost=best_cost)
-    cost = getattr(eval_res, "total_cost", getattr(eval_res, "cost", None))
-    gap = ((cost - best_cost) / best_cost) if cost else None
+    ev = evaluate_solution(instance, sol, best_known_cost=best_cost)
     return {
-        "Config Type": config_type,
-        "Base Solver": solver_name,
-        "Optimizer": opt_name,
-        "Total Cost": float(cost) if cost is not None else None,
-        "Optimality Gap": gap,
-        "Runtime (s)": round(runtime, 3),
-        "Feasible / Valid": "Yes" if getattr(eval_res, "is_valid", True) else "No",
+        "type": "Hybrid" if config_type == "Hybrid" else SOLVER_TYPES.get(solver_name, "Heuristic"),
+        "solver": solver_name,
+        "optimizer": None if opt_name in (None, "None") else opt_name,
+        "cost": float(ev.total_cost),
+        "gap": round(float(ev.gap_to_best_known), 4),           
+        "vehicles": int(ev.num_vehicles),
+        "valid": bool(ev.is_valid),
+        "runtime": round(runtime, 3),
+        "routes": [[int(s) for s in r.stops] for r in sol.routes],
+        "history": [],
+        "error": None,
     }
 
 def _error_row(config_type, solver_name, opt_name, start, error):
     return {
-        "Config Type": config_type,
-        "Base Solver": solver_name,
-        "Optimizer": opt_name,
-        "Total Cost": "Error",
-        "Optimality Gap": "N/A",
-        "Runtime (s)": round(time.perf_counter() - start, 3),
-        "Feasible / Valid": f"Failed: {str(error)[:20]}",
+        "type": "Hybrid" if config_type == "Hybrid" else SOLVER_TYPES.get(solver_name, "Heuristic"),
+        "solver": solver_name,
+        "optimizer": None if opt_name in (None, "None") else opt_name,
+        "cost": None, "gap": None, "vehicles": None, "valid": False,
+        "runtime": round(time.perf_counter() - start, 3),
+        "routes": [], "history": [],
+        "error": str(error)[:300],
     }
 
 def _run_standalone_worker(instance, solver_name: str, best_cost: float):
@@ -340,6 +350,7 @@ def run_benchmark(
     return result_to_json(results, instance, best_cost)
 
 def stream_result(instanceName, chosen_solvers=None, chosen_optimizers=None, max_workers=None):
+    # this function will run immediately 
     instance_path = BASE_DIR / "DataCVRP" / "instances" / f"{instanceName}.vrp"
     solution_path = BASE_DIR / "DataCVRP" / "solutions" / f"{instanceName}.sol"
 
@@ -350,7 +361,11 @@ def stream_result(instanceName, chosen_solvers=None, chosen_optimizers=None, max
     solver_names = _resolve(chosen_solvers, SOLVER_NAMES, "solver", none_means_all=True)
     optimizer_names = _resolve(chosen_optimizers, OPTIMIZER_NAMES, "optimizer", none_means_all=False)
 
-    # Track pending futures: {future: ("standalone", solver_name) | ("hybrid", (solver_name, opt_name))}
+    return _run_jobs(instance, best_cost, solver_names, optimizer_names, max_workers)
+
+
+def _run_jobs(instance, best_cost, solver_names, optimizer_names, max_workers):
+    #  only starts running when the router reads it
     pending_futures = {}
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -365,22 +380,21 @@ def stream_result(instanceName, chosen_solvers=None, chosen_optimizers=None, max
                 job_type, meta = pending_futures.pop(fut)
 
                 if job_type == "standalone":
-                    solver_name, init_sol, row,solver_runtime = fut.result()
+                    solver_name, init_sol, row, solver_runtime = fut.result()
 
+                    yield row                    
                     if not optimizer_names:
-                        yield row
+                        pass
                     elif init_sol is None:
                         for opt_name in optimizer_names:
                             yield _error_row("Hybrid", solver_name, opt_name, time.perf_counter(), "Base solver failed")
                     else:
-                        # Queue hybrid optimizers immediately while other solvers are still running
                         for opt_name in optimizer_names:
-                            h_fut = executor.submit(_run_hybrid_worker, instance, solver_name, opt_name, init_sol, best_cost,solver_runtime)
+                            h_fut = executor.submit(_run_hybrid_worker, instance, solver_name, opt_name, init_sol, best_cost, solver_runtime)
                             pending_futures[h_fut] = ("hybrid", (solver_name, opt_name))
 
                 elif job_type == "hybrid":
                     hybrid_row = fut.result()
                     yield hybrid_row
 
-                # Break inner for-loop so as_completed picks up newly added hybrid futures
                 break
