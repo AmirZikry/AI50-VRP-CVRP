@@ -38,8 +38,6 @@ export default function Sidebar() {
 
     getInstanceList(controller.signal)
       .then((data) => {
-        const instanceList = Array.isArray(data?.instances) ? data.instances : [];
-        setInstances(instanceList);
         const solverList = Array.isArray(data?.solvers) ? data.solvers : [];
         setSolvers(solverList);
         const optimizerList = Array.isArray(data?.optimizers) ? data.optimizers : [];
