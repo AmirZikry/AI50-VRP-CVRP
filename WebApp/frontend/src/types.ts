@@ -1,5 +1,7 @@
 // Define type of something 
 
+export type RunType = "Heuristic" | "Metaheuristic" | "Hybrid";
+
 export type RunSettings ={
     instance : string;
     solver : string;
@@ -10,6 +12,7 @@ export type RunSettings ={
 export type RunResult = {
     id : string;
     instance: string;
+    type: RunType;
     solver: string;
     optimizer: string|null;
     cost: number;
