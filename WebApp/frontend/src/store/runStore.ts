@@ -1,5 +1,5 @@
 import {create} from "zustand";
-import type { RunResult, RunSettings } from "@/types";
+import type { RunResult, RunSettings, InstanceData } from "@/types";
 
 type RunStore = {
     status: "idle" | "running" | "done" | "failed";
@@ -8,11 +8,13 @@ type RunStore = {
     runs: RunResult[];                                  // history of every run (benchmark page)
     batch: RunResult[];                                 // result of 'run all'
     currentRun: RunResult | null;                       // result of 'run solver'
+    instanceData: InstanceData | null;                  // coords & demands for the route visualiser
     setStatus: (s: RunStore["status"]) => void;         
     setSettings: (patch: Partial<RunSettings>) => void;
     cancelRun: () => void;
     addRun: (r: RunResult) => void;
     setBatch: (b: RunResult[]) => void;
+    setInstanceData: (d: InstanceData) => void;
 };
 
 export const DEFAULT_SETTINGS: RunSettings = {
@@ -27,6 +29,7 @@ export const useRunStore = create<RunStore>((set) => ({
     runs: [],
     currentRun: null,
     batch: [],
+    instanceData: null,
     runToken: 0,
     setStatus: (status) => set({ status }),
 
@@ -43,11 +46,13 @@ export const useRunStore = create<RunStore>((set) => ({
                 currentRun: null,         // clear the displayed solution
                 batch: [],                // clear the "Run all" result
                 status: "idle",
-                runToken: s.runToken + 1, 
+                runToken: s.runToken + 1,
+                instanceData: next.instance !== s.settings.instance ? null : s.instanceData,
             };
         }),
 
     cancelRun: () => set((s) => ({ status: "idle", runToken: s.runToken + 1 })),
     addRun: (r) => set((s) => ({ runs: [...s.runs, r], currentRun: r, batch: [], status: "done" })),
     setBatch: (batch) => set((s) => ({ batch, currentRun: null, runs: [...s.runs, ...batch], status: "done" })),
+    setInstanceData: (d) => set({ instanceData: d }),
 }));
