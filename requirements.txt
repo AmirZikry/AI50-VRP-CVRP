@@ -6,4 +6,4 @@ fastapi
 uvicorn
 streamlit
 matplotlib
-dotenv
+python-dotenv
