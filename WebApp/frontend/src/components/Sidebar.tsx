@@ -146,7 +146,7 @@ export default function Sidebar() {
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Optimizer (hybrid)</Label>
           <Select
-            value={settings.optimizer ?? "none"}
+            value={settings.optimizer ?? "None"}
             onValueChange={(value) => value && setSettings({ optimizer: value })}
             disabled={optimizers.length === 0}
           >
