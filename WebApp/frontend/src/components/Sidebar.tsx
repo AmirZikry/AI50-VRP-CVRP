@@ -9,17 +9,10 @@ import {
 } from "@/components/ui/select";
 
 import { startRun, startRunAll, getInstanceList } from "@/lib/api";
+import InstancePicker from "@/components/InstancePicker";
 import { useRunStore } from "@/store/runStore";
 import { useEffect, useState } from "react";
 
-const SOLVERS = [
-  "Clarke-Wright",
-  "Nearest Neighbor",
-  "Cheapest Insertion",
-  "Genetic Algorithm",
-  "Ant Colony",
-];
-const OPTIMIZERS = ["none", "Simulated Annealing", "Tabu Search"];
 
 const STATUS_LABELS: Record<string, string> = {
   idle: "Ready",
@@ -29,7 +22,6 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function Sidebar() {
-  const [instances, setInstances] = useState<string[]>([]);
   const [solvers, setSolvers] = useState<string[]>([]);
   const [optimizers, setOptimizers] = useState<string[]>(["none"]);
   const settings = useRunStore((s) => s.settings);
@@ -91,7 +83,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
+    <aside className="w-full lg:w-96 shrink-0 bg-card border border-border rounded-xl p-5 flex flex-col gap-5 shadow-xs">
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration
@@ -101,26 +93,7 @@ export default function Sidebar() {
 
       <div className="space-y-4">
         {/* Instance */}
-        <div className="space-y-1.5">
-          <Label htmlFor="instance" className="text-xs font-medium">Instance</Label>
-          <Select
-            value={settings.instance}
-            onValueChange={(value) => value && setSettings({ instance: value })}
-            disabled={instances.length === 0}
-          >
-            <SelectTrigger id="instance" className="w-full font-mono text-xs bg-background/50 h-9">
-              <SelectValue placeholder="Select an instance..." />
-            </SelectTrigger>
-            <SelectContent>
-              {instances.map((inst) => (
-                <SelectItem key={inst} value={inst} className="font-mono text-xs">
-                  {inst}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
+        <InstancePicker />
         {/* Solver */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Solver</Label>

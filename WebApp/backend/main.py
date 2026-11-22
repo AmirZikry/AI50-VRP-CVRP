@@ -5,6 +5,7 @@ from .routers.option import router as optionRouter
 from dotenv import load_dotenv
 import os
 load_dotenv()
+from .routers.instances import router as instancesRouter
 
 app = FastAPI(
 title="CVRP API",
@@ -15,7 +16,7 @@ origin = os.getenv("REACT_APP_URL")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origin,
+    allow_origins=[origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -23,7 +24,7 @@ app.add_middleware(
 
 app.include_router(solutionRouter)
 app.include_router(optionRouter)
-
+app.include_router(instancesRouter)
 
 @app.get("/")
 def read_root():
