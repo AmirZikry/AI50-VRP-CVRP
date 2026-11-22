@@ -28,8 +28,6 @@ The address must match exactly what you see in the browser bar: `localhost` and 
 ```
 VITE_API_URL=http://localhost:8000
 ```
-
-Vite only exposes variables that start with `VITE_`. After editing this file, restart `npm run dev`.
 ---
 
 ## 2. Quick start
