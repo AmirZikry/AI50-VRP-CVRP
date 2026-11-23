@@ -111,7 +111,7 @@ export async function getInstanceList(signal?: AbortSignal) {
 /** Fetch instance geometry (coords + demands) for the route visualiser.
  *  Calls GET /options/instance/{name} on the backend. */
 export async function fetchInstanceData(instanceName: string): Promise<InstanceData> {
-  const res = await fetch(`${API_URL}/options/instance/${encodeURIComponent(instanceName)}`);
+  const res = await fetch(`${API_URL}/instances/${encodeURIComponent(instanceName)}`);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(
