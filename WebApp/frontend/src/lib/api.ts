@@ -108,3 +108,35 @@ export async function getInstanceList(signal?: AbortSignal) {
 
   return res.json();
 }
+
+export async function exportBenchmarkExcel(instanceName: string, results: RunResult[]): Promise<void> {
+  const res = await fetch(`${API_URL}/solutions/export-excel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instanceName,
+      results: results.map((r) => ({
+        type: r.type,
+        solver: r.solver,
+        optimizer: r.optimizer,
+        cost: r.cost,
+        gap: r.gap,
+        runtime: r.runtime,
+        valid: r.valid,
+      })),
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(typeof body?.detail === "string" ? body.detail : `Export failed (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `benchmark_${instanceName}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

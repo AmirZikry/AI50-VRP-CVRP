@@ -52,6 +52,13 @@ def get_instances():
         files.append(Path(file).stem)
     return sorted(files)
 
+def getInstanceInfo(instanceName:str):
+    instance_path = BASE_DIR / "DataCVRP" / "instances" / f"{instanceName}.vrp"
+    solution_path = BASE_DIR / "DataCVRP" / "solutions" / f"{instanceName}.sol"
+    instance = load_instance(instance_path, is_local=True)
+    best_cost = vrplib.read_solution(solution_path)["cost"]
+    return instance,best_cost
+
 def get_solvers(instance):
     """defining all solvers."""
     return {

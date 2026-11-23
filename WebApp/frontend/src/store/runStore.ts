@@ -41,7 +41,7 @@ export const useRunStore = create<RunStore>((set) => ({
             return {
                 settings: next,
                 currentRun: null,         // clear the displayed solution
-                batch: [],                // clear the "Run all" result
+                //batch: [],                // clear the "Run all" result
                 status: "idle",
                 runToken: s.runToken + 1, 
             };

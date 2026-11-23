@@ -17,3 +17,16 @@ class SolutionResponse(SolutionBase):
     id:int
     class Config:
         from_attributes=True
+
+class ExportRow(BaseModel):
+    type: str | None = None
+    solver: str
+    optimizer: str | None = None
+    cost: float | None = None
+    gap: float | None = None
+    runtime: float = 0.0
+    valid: bool = False
+
+class ExportExcelRequest(BaseModel):
+    instanceName: str
+    results: list[ExportRow]
