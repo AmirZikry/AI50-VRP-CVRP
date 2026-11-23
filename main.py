@@ -4,6 +4,7 @@ import vrplib
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from itertools import product
 
 from pathlib import Path
 import os
@@ -44,13 +45,18 @@ OPTIMIZER_NAMES = [
     "Tabu Search",
 ]
 
+depot = ["1", "2", "3"] 
+customers = ["1", "2", "3"]
+demands = ["1", "3", "5"]
+routes_length = ["1", "4", "6"]
+number = "01"
+
+
 def get_instances():
-    data_Path=f"{BASE_DIR}/DataCVRP/instances"
-    contents = os.listdir(data_Path)
-    files=[]
-    for file in contents:
-        files.append(Path(file).stem)
-    return sorted(files)
+    name_instances = {Path(f).stem for f in os.listdir(f"{BASE_DIR}/DataCVRP/instances")}
+    grid = [f"XML100_{a}{b}{c}{d}_{number}"
+        for a,b,c,d in product(depot,customers,demands,routes_length)]
+    return [name for name in grid if name in name_instances]
 
 def get_solvers(instance):
     """defining all solvers."""

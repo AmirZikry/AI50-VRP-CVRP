@@ -17,20 +17,13 @@ export const CUSTOMERS: Choice[] = [
 
 export const DEMAND: Choice[] = [
   { value: "1", label: "All equal (1)" },
-  { value: "2", label: "Small (1–10)" },
   { value: "3", label: "Small (5–10)" },
-  { value: "4", label: "Large (1–100)" },
   { value: "5", label: "Large (50–100)" },
-  { value: "6", label: "Depends on location" },
-  { value: "7", label: "Mostly small, a few large" },
 ];
 
 export const ROUTE_LENGTH: Choice[] = [
   { value: "1", label: "~4 customers" },
-  { value: "2", label: "~6 customers" },
-  { value: "3", label: "~10 customers" },
   { value: "4", label: "~14 customers" },
-  { value: "5", label: "~20 customers" },
   { value: "6", label: "~38 customers" },
 ];
 

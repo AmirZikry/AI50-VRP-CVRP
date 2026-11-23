@@ -53,7 +53,6 @@ export default function InstancePicker() {
 
   const known = useMemo(() => new Set(all ?? []), [all]);
   const parts = parseInstance(instance);
-  const numbers = parts && all ? availableNumbers(all, parts) : [];
 
   function change(patch: Partial<Parts>) {
     if (!parts || !all) return;
@@ -80,12 +79,6 @@ export default function InstancePicker() {
         <Pick label="Customers Positions" value={parts?.customers} choices={CUSTOMERS} onChange={(v) => change({ customers: v })} />
         <Pick label="Demand" value={parts?.demand} choices={DEMAND} onChange={(v) => change({ demand: v })} />
         <Pick label="Customers per truck" value={parts?.route} choices={ROUTE_LENGTH} onChange={(v) => change({ route: v })} />
-        <Pick
-          label="Number"
-          value={parts ? String(parts.num) : undefined}
-          choices={numbers.map((n) => ({ value: String(n), label: String(n).padStart(2, "0") }))}
-          onChange={(v) => change({ num: Number(v) })}
-        />
       </div>
 
 
