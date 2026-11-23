@@ -8,7 +8,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import { startRun, startRunAll, getInstanceList } from "@/lib/api";
+import { startRun, startRunAll, getInstanceList, fetchInstanceData } from "@/lib/api";
 import InstancePicker from "@/components/InstancePicker";
 import { useRunStore } from "@/store/runStore";
 import { useEffect, useState } from "react";
@@ -31,6 +31,8 @@ export default function Sidebar() {
 	const run = useRunStore((s) => s.currentRun);
 	const addRun = useRunStore((s) => s.addRun);
 	const setBatch = useRunStore((s) => s.setBatch);
+  const setInstanceData = useRunStore((s) => s.setInstanceData);
+
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -60,6 +62,12 @@ export default function Sidebar() {
 			const result = await startRun(settings);
 			if (isStale(token)) return;
 			addRun(result);
+      // Fetch instance node data for route visualisation if not cached
+      if (!useRunStore.getState().instanceData || useRunStore.getState().instanceData?.name !== settings.instance) {
+        fetchInstanceData(settings.instance).then((d) => {
+          if (!isStale(token)) setInstanceData(d);
+        });
+      }
 		} catch (err) {
 			console.error("Run failed:", err);
 			if (!isStale(token)) setStatus("failed");
@@ -131,8 +139,8 @@ export default function Sidebar() {
 					<Select
 						value={settings.optimizer ?? "None"}
 						onValueChange={(value) =>
-							value && setSettings({ optimizer: value })
-						}
+              value && setSettings({ optimizer: value === "None" ? null : value })
+            }
 						disabled={optimizers.length === 0}
 					>
 						<SelectTrigger

@@ -7,7 +7,7 @@ import {
 const items = [
   { to: "/", label: "Solve", Icon: HouseIcon },
   { to: "/benchmark", label: "Benchmark", Icon: ChartBarIcon },
-  { to: "", label:"Visualization", Icon: ChartPie}
+  { to: "/visualization", label:"Visualization", Icon: ChartPie}
 ];
 
 export function Navbar() {
