@@ -1,4 +1,5 @@
-import type { RunSettings, RunResult, RunType } from "@/types";
+// frontend that will call backend nanti
+import type { RunSettings, RunResult, RunType, InstanceData } from "@/types";
 
 const API_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -38,7 +39,7 @@ async function postSolutions(
   return res.json();
 }
 
-// ApiRow (backend) -> RunResult 
+// ApiRow (backend) -> RunResult
 function toRunResult(row: ApiRow, instance: string): RunResult {
   if (row.error || row.cost === null || row.gap === null || row.vehicles === null) {
     throw new Error(row.error ?? "The run failed");
@@ -59,7 +60,7 @@ function toRunResult(row: ApiRow, instance: string): RunResult {
   };
 }
 
-// "Run solver": one solver with or w/o solver
+// "Run solver": one solver with or w/o optimizer
 export async function startRun(s: RunSettings): Promise<RunResult> {
   const rows = await postSolutions(s.instance, [s.solver], s.optimizer);
   const row = rows.find((r) => r.optimizer === s.optimizer);
@@ -101,11 +102,24 @@ export function getInstanceNames(): Promise<string[]> {
 // Used by Sidebar to fill the solver / optimizer dropdowns (GET /options/)
 export async function getInstanceList(signal?: AbortSignal) {
   const res = await fetch(`${API_URL}/options/`, { signal });
-
   if (!res.ok) {
     throw new Error(`Failed to fetch options (${res.status})`);
   }
+  return res.json();
+}
 
+/** Fetch instance geometry (coords + demands) for the route visualiser.
+ *  Calls GET /options/instance/{name} on the backend. */
+export async function fetchInstanceData(instanceName: string): Promise<InstanceData> {
+  const res = await fetch(`${API_URL}/instances/${encodeURIComponent(instanceName)}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(
+      typeof body?.detail === "string"
+        ? body.detail
+        : `Failed to load instance data (${res.status})`,
+    );
+  }
   return res.json();
 }
 

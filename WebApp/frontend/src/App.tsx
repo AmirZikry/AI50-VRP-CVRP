@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Navbar } from "@/components/Navbar"
 import Solve from "@/pages/Solve";
 import Benchmark from "@/pages/Benchmark";
+import Visualization from "@/pages/Visualization";
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Solve />} />
         <Route path="/benchmark" element={<Benchmark />} />
+        <Route path="/visualization" element={<Visualization />} />
       </Routes>
     </div>
   );
